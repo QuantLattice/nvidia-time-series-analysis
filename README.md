@@ -158,6 +158,12 @@ GUI → Services → Repositories → Database
 * Clear data flow
 * Minimal coupling between modules
 
+### Global system rules:
+
+- `contracts.md` defines data structures (static truth)
+- `app_config.json` defines runtime behavior (dynamic settings)
+- All modules MUST respect both layers
+
 ---
 
 ## 👥 Development Guidelines
@@ -182,3 +188,40 @@ GUI → Services → Repositories → Database
 * All data processing should go through `services/`
 * Follow PEP 8 and PEP 257
 * Keep modules under ~300 lines (as required)
+
+## ⚙️ Configuration System
+
+The project uses a centralized JSON-based configuration system.
+
+### Files:
+- `work/config/app_config.json` — active runtime configuration
+- `work/config/default_config.json` — fallback default configuration
+
+### Purpose:
+The configuration system defines all runtime parameters of the application, including:
+- file system paths
+- database connection settings
+- UI parameters
+- report export settings
+- analysis parameters
+
+### Key principles:
+- Single source of truth for all runtime settings
+- No hardcoded paths or parameters in code
+- All modules must read settings from config at runtime
+
+## 📐 Data Contracts
+
+The project enforces strict data contracts to ensure consistency across all modules
+(GUI, analytics, database, and reporting).
+
+### Main contract file:
+- `work/docs/contracts.md`
+
+### Purpose:
+Defines canonical formats for:
+- stock price data (OHLCV)
+- column naming conventions
+- CSV import rules
+- database schema structure
+- DataFrame formats used in processing pipeline
