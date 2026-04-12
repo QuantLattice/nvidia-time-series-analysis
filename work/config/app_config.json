@@ -10,7 +10,7 @@
     "host": "localhost",
     "port": 3306,
     "user": "root",
-    "password": "",
+    "password": "200715",
     "database": "nvidia_timeseries"
   },
   "ui": {
@@ -24,8 +24,14 @@
     "default_chart_format": "png"
   },
   "analysis": {
-    "sma_windows": [5, 20],
-    "ema_windows": [12, 26],
+    "sma_windows": [
+      5,
+      20
+    ],
+    "ema_windows": [
+      12,
+      26
+    ],
     "volatility_window": 20,
     "forecast_horizon": 30
   }
