@@ -5,14 +5,6 @@
     "graphics_dir": "work/graphics",
     "logs_dir": "work/logs"
   },
-  "database": {
-    "engine": "mysql",
-    "host": "localhost",
-    "port": 3306,
-    "user": "root",
-    "password": "200715",
-    "database": "nvidia_timeseries"
-  },
   "ui": {
     "language": "ru",
     "theme": "light",
@@ -24,14 +16,8 @@
     "default_chart_format": "png"
   },
   "analysis": {
-    "sma_windows": [
-      5,
-      20
-    ],
-    "ema_windows": [
-      12,
-      26
-    ],
+    "sma_windows": [5, 20],
+    "ema_windows": [12, 26],
     "volatility_window": 20,
     "forecast_horizon": 30
   }

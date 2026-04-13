@@ -1,17 +1,18 @@
-"""Application entry point."""
 from sqlalchemy import text
 
-from work.scripts.db.session import SessionLocal
+from work.scripts.db.session import Database
 
 
 def main() -> None:
-    session = SessionLocal()
+    db = Database()
 
-    try:
-        session.execute(text("SELECT 1"))
-        print("Database connection established successfully.")
-    finally:
-        session.close()
+    with db.session() as session:
+        result = session.execute(text("SELECT 1"))
+
+        value = result.scalar()
+
+        print("Database connection successful ✔")
+        print(f"Query result: {value}")
 
 
 if __name__ == "__main__":

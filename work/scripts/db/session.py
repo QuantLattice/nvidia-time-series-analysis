@@ -1,47 +1,132 @@
-"""Creates session for connecting to DB."""
-import json
-from pathlib import Path
+"""Database engine and session management utilities.
+
+This module provides functionality for building a database connection URL,
+initializing the SQLAlchemy engine, and managing database sessions using
+a context manager.
+"""
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from contextlib import contextmanager
+
+from work.library.config.config_manager import ConfigManager
+from work.library.config.env_loader import DBConfig
+
+from pathlib import Path
+from urllib.parse import quote_plus
 
 
-def load_config() -> dict:
-    project_root = Path(__file__).resolve().parents[3]
-    config_path = project_root / "work" / "config" / "app_config.json"
+def build_db_url(db_config: DBConfig) -> str:
+    """Build a SQLAlchemy database connection URL.
 
-    with config_path.open("r", encoding="utf-8") as file:
-        return json.load(file)
+    Parameters
+    ----------
+    db_config : DBConfig
+        Database configuration object containing connection parameters.
+
+    Returns
+    -------
+    str
+        SQLAlchemy-compatible database connection string.
+
+    Notes
+    -----
+    The password is URL-encoded to ensure safe usage in the connection string.
+    """
+
+    password = quote_plus(db_config.password)
+
+    return (
+        f"mysql+pymysql://{db_config.user}:{password}"
+        f"@{db_config.host}:{db_config.port}/{db_config.database}"
+    )
 
 
-def build_db_url() -> str:
-    config = load_config()
+class Database:
+    """Database connection and session factory.
 
-    db_config = config["database"]
+    This class initializes the SQLAlchemy engine and provides a session
+    factory for interacting with the database.
 
-    db_engine = db_config["engine"]
-    host = db_config["host"]
-    port = db_config["port"]
-    user = db_config["user"]
-    password = db_config["password"]
-    database = db_config["database"]
+    Parameters
+    ----------
+    env_path : str | None, optional
+        Path to the .env file with database credentials.
+    app_config_path : str | Path | None, optional
+        Path to the application configuration file.
 
-    if db_engine != "mysql":
-        raise ValueError(f"Unsupported database engine: {db_engine}")
+    Attributes
+    ----------
+    db_url : str
+        Database connection URL.
+    engine : sqlalchemy.Engine
+        SQLAlchemy engine instance.
+    SessionLocal : sessionmaker
+        Factory for creating database sessions.
+    """
 
-    return f"mysql+pymysql://{user}:{password}@{host}:{port}/{database}"
+    def __init__(
+        self,
+        env_path: str | None = None,
+        app_config_path: str | Path | None = None
+    ) -> None:
+        """Initialize the database connection.
 
+        Parameters
+        ----------
+        env_path : str | None, optional
+            Path to the .env file.
+        app_config_path : str | Path | None, optional
+            Path to the application configuration file.
+        """
 
-DATABASE_URL = build_db_url()
+        config = ConfigManager(
+            env_path=env_path,
+            app_config_path=app_config_path
+        ).load()
 
-engine = create_engine(
-    url=DATABASE_URL,
-    echo=True,
-    pool_pre_ping=True,
-)
+        self.db_url = build_db_url(config.db)
 
-SessionLocal = sessionmaker(
-    bind=engine,
-    autoflush=False,
-    autocommit=False,
-)
+        self.engine = create_engine(
+            url=self.db_url,
+            echo=False,
+            pool_pre_ping=True
+        )
+
+        self.SessionLocal = sessionmaker(
+            bind=self.engine,
+            autoflush=False,
+            autocommit=False
+        )
+
+    @contextmanager
+    def session(self):
+        """Provide a transactional database session.
+
+        Yields
+        ------
+        sqlalchemy.orm.Session
+            Active database session.
+
+        Notes
+        -----
+        - Commits transaction if no exceptions occur.
+        - Rolls back transaction on error.
+        - Always closes the session after use.
+
+        Examples
+        --------
+        >>> db = Database()
+        >>> with db.session() as session:
+        ...     session.execute("SELECT 1")
+        """
+
+        db = self.SessionLocal()
+        try:
+            yield db
+            db.commit()
+        except Exception:
+            db.rollback()
+            raise
+        finally:
+            db.close()
