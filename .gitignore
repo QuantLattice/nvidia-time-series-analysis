@@ -1,1 +1,10 @@
 venv
+
+.DS_Store
+
+.idea
+
+.env
+mysql.cnf
+
+__pycache__
