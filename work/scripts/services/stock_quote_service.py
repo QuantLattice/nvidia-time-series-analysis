@@ -144,7 +144,7 @@ class StockQuoteService:
             Tabular representation of stock data.
         """
 
-        return pd.DataFrame (
+        return pd.DataFrame(
             [
                 {
                     S.TRADE_DATE: q.trade_date,

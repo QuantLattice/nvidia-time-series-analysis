@@ -45,7 +45,7 @@ class StockQuoteRepository:
         """
 
         return self.session.query(StockQuote).all()
-    
+
     def get_by_date_range(
         self,
         start_date: date,
@@ -71,7 +71,7 @@ class StockQuoteRepository:
             .filter(StockQuote.trade_date.between(start_date, end_date))
             .all()
         )
-    
+
     def get_by_id(self, quote_id: int) -> StockQuote | None:
         """Retrieve a stock quote by its primary key.
 
