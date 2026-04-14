@@ -45,7 +45,17 @@ if errorlevel 1 (
 echo %LOG_SUCCESS% Database initialized
 
 echo.
-echo %LOG_STEP% Step 4: Final verification...
+echo %LOG_STEP% Step 4: Applying database migrations...
+call db\apply_migrations.bat
+if errorlevel 1 (
+    echo %LOG_ERROR% Database migrations failed
+    popd
+    exit /b 1
+)
+echo %LOG_SUCCESS% Migrations applied
+
+echo.
+echo %LOG_STEP% Step 5: Final verification...
 call install\post_install.bat
 if errorlevel 1 (
     echo %LOG_ERROR% Post-install checks failed
