@@ -8,3 +8,5 @@ venv
 mysql.cnf
 
 __pycache__
+
+.coverage
