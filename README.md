@@ -158,6 +158,12 @@ GUI → Services → Repositories → Database
 * Clear data flow
 * Minimal coupling between modules
 
+### Global system rules:
+
+- `contracts.md` defines data structures (static truth)
+- `app_config.json` defines runtime behavior (dynamic settings)
+- All modules MUST respect both layers
+
 ---
 
 ## 👥 Development Guidelines
@@ -182,3 +188,163 @@ GUI → Services → Repositories → Database
 * All data processing should go through `services/`
 * Follow PEP 8 and PEP 257
 * Keep modules under ~300 lines (as required)
+
+## ⚙️ Configuration System
+
+The project uses a centralized JSON-based configuration system.
+
+### Files:
+- `work/config/app_config.json` — active runtime configuration
+- `work/config/default_config.json` — fallback default configuration
+
+### Purpose:
+The configuration system defines all runtime parameters of the application, including:
+- file system paths
+- database connection settings
+- UI parameters
+- report export settings
+- analysis parameters
+
+### Key principles:
+- Single source of truth for all runtime settings
+- No hardcoded paths or parameters in code
+- All modules must read settings from config at runtime
+
+## 📐 Data Contracts
+
+The project enforces strict data contracts to ensure consistency across all modules
+(GUI, analytics, database, and reporting).
+
+### Main contract file:
+- `work/docs/contracts.md`
+
+### Purpose:
+Defines canonical formats for:
+- stock price data (OHLCV)
+- column naming conventions
+- CSV import rules
+- database schema structure
+- DataFrame formats used in processing pipeline
+
+## 🧪 Testing System
+
+The project includes a structured testing system based on `pytest`, designed to ensure correctness of data processing, validation logic, and full ETL pipeline consistency.
+
+### 📁 Test Structure
+
+All tests are located in:
+
+```
+work/tests/
+```
+
+#### Test categories:
+
+* `unit/` — isolated tests for individual components
+* `integration/` — full pipeline and cross-module tests
+* `fixtures/` — reusable test datasets and mock inputs
+* `helpers/` — shared testing utilities and pipeline builders
+
+---
+
+### 🧪 Test Configuration
+
+Testing is configured via `pytest.ini`:
+
+```ini
+[pytest]
+pythonpath = .
+
+testpaths = work/tests
+
+markers =
+    unit: unit tests
+    integration: integration tests
+```
+
+### Key settings:
+
+* `pythonpath = .`
+  Ensures project root imports work correctly.
+
+* `testpaths = work/tests`
+  Restricts discovery to the project test directory.
+
+* Custom markers:
+
+  * `unit` → fast isolated tests
+  * `integration` → full system pipeline tests
+
+---
+
+### ▶️ Running Tests
+
+#### Run all tests:
+
+```bash
+pytest
+```
+
+#### Run only unit tests:
+
+```bash
+pytest -m unit
+```
+
+#### Run only integration tests:
+
+```bash
+pytest -m integration
+```
+
+#### Run specific directory:
+
+```bash
+pytest work/tests/unit
+pytest work/tests/integration
+```
+
+---
+
+### 🔬 Testing Strategy
+
+The testing system is designed around a layered validation approach:
+
+#### 1. Unit Tests
+
+Validate isolated components:
+
+* `StockQuoteNormalizer`
+* `StockQuoteValidator`
+* schema transformations
+* column cleanup logic
+* type conversion rules
+
+These tests ensure correctness of individual functions without external dependencies.
+
+---
+
+#### 2. Integration Tests
+
+Validate full data pipeline:
+
+```
+raw input → normalization → validation → clean dataset
+```
+
+Coverage includes:
+
+* valid CSV-like datasets
+* schema violations (missing or extra columns)
+* type conversion failures
+* business rule enforcement (OHLC logic)
+* invalid numeric values (negative volume, prices)
+* real-world noisy datasets
+* null handling scenarios
+
+Integration tests ensure that all system layers work correctly together:
+
+* contracts
+* services
+* validation
+* data processing pipeline
