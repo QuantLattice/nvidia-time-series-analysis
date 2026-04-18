@@ -4,6 +4,7 @@ This module provides a typed interface over pandas DataFrame for safer
 and more readable access to stock price data columns.
 """
 
+
 import pandas as pd
 from .stock_quote_schema import StockQuoteSchema as S
 

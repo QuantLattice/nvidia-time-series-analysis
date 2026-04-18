@@ -225,3 +225,126 @@ Defines canonical formats for:
 - CSV import rules
 - database schema structure
 - DataFrame formats used in processing pipeline
+
+## 🧪 Testing System
+
+The project includes a structured testing system based on `pytest`, designed to ensure correctness of data processing, validation logic, and full ETL pipeline consistency.
+
+### 📁 Test Structure
+
+All tests are located in:
+
+```
+work/tests/
+```
+
+#### Test categories:
+
+* `unit/` — isolated tests for individual components
+* `integration/` — full pipeline and cross-module tests
+* `fixtures/` — reusable test datasets and mock inputs
+* `helpers/` — shared testing utilities and pipeline builders
+
+---
+
+### 🧪 Test Configuration
+
+Testing is configured via `pytest.ini`:
+
+```ini
+[pytest]
+pythonpath = .
+
+testpaths = work/tests
+
+markers =
+    unit: unit tests
+    integration: integration tests
+```
+
+### Key settings:
+
+* `pythonpath = .`
+  Ensures project root imports work correctly.
+
+* `testpaths = work/tests`
+  Restricts discovery to the project test directory.
+
+* Custom markers:
+
+  * `unit` → fast isolated tests
+  * `integration` → full system pipeline tests
+
+---
+
+### ▶️ Running Tests
+
+#### Run all tests:
+
+```bash
+pytest
+```
+
+#### Run only unit tests:
+
+```bash
+pytest -m unit
+```
+
+#### Run only integration tests:
+
+```bash
+pytest -m integration
+```
+
+#### Run specific directory:
+
+```bash
+pytest work/tests/unit
+pytest work/tests/integration
+```
+
+---
+
+### 🔬 Testing Strategy
+
+The testing system is designed around a layered validation approach:
+
+#### 1. Unit Tests
+
+Validate isolated components:
+
+* `StockQuoteNormalizer`
+* `StockQuoteValidator`
+* schema transformations
+* column cleanup logic
+* type conversion rules
+
+These tests ensure correctness of individual functions without external dependencies.
+
+---
+
+#### 2. Integration Tests
+
+Validate full data pipeline:
+
+```
+raw input → normalization → validation → clean dataset
+```
+
+Coverage includes:
+
+* valid CSV-like datasets
+* schema violations (missing or extra columns)
+* type conversion failures
+* business rule enforcement (OHLC logic)
+* invalid numeric values (negative volume, prices)
+* real-world noisy datasets
+* null handling scenarios
+
+Integration tests ensure that all system layers work correctly together:
+
+* contracts
+* services
+* validation
+* data processing pipeline
