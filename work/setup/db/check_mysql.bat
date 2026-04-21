@@ -1,25 +1,15 @@
 @echo off
 setlocal
+pushd "%~dp0\..\..\.."
 
-set "LOG_INFO=[INFO]"
-set "LOG_SUCCESS=[SUCCESS]"
-set "LOG_ERROR=[ERROR]"
-
-set CNF=%~dp0..\..\config\mysql.cnf
-
-if not exist "%CNF%" (
-    echo %LOG_ERROR% MySQL config not found. Run create_mysql_config.bat first.
-    exit /b 1
+where py >nul 2>nul
+if %ERRORLEVEL% EQU 0 (
+    py -3 -m work.setup.setup_manager check-mysql %*
+) else (
+    python -m work.setup.setup_manager check-mysql %*
 )
+set "EXIT_CODE=%ERRORLEVEL%"
 
-echo %LOG_INFO% Checking MySQL connection...
-
-mysql --defaults-extra-file="%CNF%" -s -N -e "SELECT 1;"
-
-if errorlevel 1 (
-    echo %LOG_ERROR% Failed to connect to MySQL
-    exit /b 1
-)
-
-echo %LOG_SUCCESS% MySQL connection OK
-exit /b 0
+popd
+endlocal
+exit /b %EXIT_CODE%

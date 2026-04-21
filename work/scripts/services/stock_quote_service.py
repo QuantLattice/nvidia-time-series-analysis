@@ -5,7 +5,12 @@ ORM entities into pandas DataFrames for analytical processing.
 """
 
 
-from datetime import date
+from datetime import date, datetime
+from decimal import Decimal
+import math
+import re
+from typing import Any
+
 import pandas as pd
 
 from work.scripts.db.session import Database
@@ -28,6 +33,32 @@ class StockQuoteService:
         Database manager instance.
     """
 
+    _DATE_PATTERN = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+    _FIELD_NAMES = {
+        "trade_date",
+        "open_price",
+        "high_price",
+        "low_price",
+        "close_price",
+        "adj_close_price",
+        "volume",
+    }
+    _REQUIRED_CREATE_FIELDS = {
+        "trade_date",
+        "open_price",
+        "high_price",
+        "low_price",
+        "close_price",
+        "volume",
+    }
+    _PRICE_FIELDS = {
+        "open_price",
+        "high_price",
+        "low_price",
+        "close_price",
+        "adj_close_price",
+    }
+
     def __init__(self, db: Database) -> None:
         """Initialize service with database manager.
 
@@ -38,6 +69,98 @@ class StockQuoteService:
         """
 
         self.db = db
+
+    def create_quote(self, data: dict[str, Any]) -> dict[str, Any]:
+        """Create a stock quote from a plain dictionary."""
+
+        quote = self._to_entity(data)
+        with self.db.session() as session:
+            repo = StockQuoteRepository(session)
+            self._ensure_trade_date_available(repo, quote.trade_date)
+            created_quote = repo.add(quote)
+            return self._to_dict(created_quote)
+
+    def update_quote_by_id(
+        self,
+        quote_id: int,
+        data: dict[str, Any]
+    ) -> dict[str, Any] | None:
+        """Update a stock quote by id and return the updated record."""
+
+        normalized_data = self._normalize_update_data(data)
+        if not normalized_data:
+            raise ValueError("No stock quote fields were provided for update")
+
+        with self.db.session() as session:
+            repo = StockQuoteRepository(session)
+            current_quote = repo.get_by_id(quote_id)
+            if current_quote is None:
+                return None
+
+            if "trade_date" in normalized_data:
+                self._ensure_trade_date_available(
+                    repo,
+                    normalized_data["trade_date"],
+                    current_quote_id=quote_id
+                )
+
+            updated_quote = repo.update_by_id(quote_id, **normalized_data)
+            if updated_quote is None:
+                return None
+
+            return self._to_dict(updated_quote)
+
+    def delete_quote_by_id(self, quote_id: int) -> bool:
+        """Delete a stock quote by id."""
+
+        with self.db.session() as session:
+            repo = StockQuoteRepository(session)
+            return repo.delete_by_id(quote_id)
+
+    def get_quote_by_id(self, quote_id: int) -> dict[str, Any] | None:
+        """Return a stock quote by id as a plain dictionary."""
+
+        with self.db.session() as session:
+            repo = StockQuoteRepository(session)
+            quote = repo.get_by_id(quote_id)
+            if quote is None:
+                return None
+
+            return self._to_dict(quote)
+
+    def get_all_quotes(self) -> list[dict[str, Any]]:
+        """Return all stock quotes as plain dictionaries."""
+
+        with self.db.session() as session:
+            repo = StockQuoteRepository(session)
+            return [
+                self._to_dict(quote)
+                for quote in repo.get_all()
+            ]
+
+    def get_quotes_by_date_range(
+        self,
+        start_date: date | datetime | str,
+        end_date: date | datetime | str
+    ) -> list[dict[str, Any]]:
+        """Return stock quotes within an inclusive date range."""
+
+        normalized_start_date = self._parse_date(start_date, "start_date")
+        normalized_end_date = self._parse_date(end_date, "end_date")
+        if normalized_start_date > normalized_end_date:
+            raise ValueError(
+                "start_date must be earlier than or equal to end_date"
+            )
+
+        with self.db.session() as session:
+            repo = StockQuoteRepository(session)
+            return [
+                self._to_dict(quote)
+                for quote in repo.get_by_date_range(
+                    normalized_start_date,
+                    normalized_end_date
+                )
+            ]
 
     def get_all_quotes_df(self) -> pd.DataFrame:
         """Retrieve all stock quotes as a DataFrame.
@@ -129,6 +252,228 @@ class StockQuoteService:
         with self.db.session() as session:
             repo = StockQuoteRepository(session)
             repo.delete(quote)
+
+    def _to_entity(self, data: dict[str, Any]) -> StockQuote:
+        """Convert a plain dictionary into a ``StockQuote`` entity."""
+
+        normalized_data = self._normalize_create_data(data)
+        return StockQuote(**normalized_data)
+
+    def _to_dict(self, entity: StockQuote) -> dict[str, Any]:
+        """Convert a ``StockQuote`` entity into a UI-safe dictionary."""
+
+        return {
+            "id": entity.id,
+            "trade_date": entity.trade_date.isoformat(),
+            "open_price": self._serialize_number(entity.open_price),
+            "high_price": self._serialize_number(entity.high_price),
+            "low_price": self._serialize_number(entity.low_price),
+            "close_price": self._serialize_number(entity.close_price),
+            "adj_close_price": self._serialize_optional_number(
+                entity.adj_close_price
+            ),
+            "volume": int(entity.volume),
+        }
+
+    def _normalize_create_data(
+        self,
+        data: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Normalize and validate a create payload."""
+
+        self._ensure_dict(data)
+        self._validate_known_fields(data)
+
+        missing_fields = [
+            field_name
+            for field_name in sorted(self._REQUIRED_CREATE_FIELDS)
+            if field_name not in data or self._is_blank(data[field_name])
+        ]
+        if missing_fields:
+            joined_fields = ", ".join(missing_fields)
+            raise ValueError(
+                f"Missing required stock quote fields: {joined_fields}"
+            )
+
+        normalized_data = self._normalize_fields(data)
+        normalized_data.setdefault("adj_close_price", None)
+        return normalized_data
+
+    def _normalize_update_data(
+        self,
+        data: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Normalize and validate an update payload."""
+
+        self._ensure_dict(data)
+        self._validate_known_fields(data)
+        return self._normalize_fields(data)
+
+    def _normalize_fields(self, data: dict[str, Any]) -> dict[str, Any]:
+        """Normalize supported stock quote fields from a payload."""
+
+        normalized_data: dict[str, Any] = {}
+        for field_name, value in data.items():
+            if field_name == "id":
+                continue
+            if field_name == "trade_date":
+                normalized_data[field_name] = self._parse_date(
+                    value,
+                    field_name
+                )
+            elif field_name in self._PRICE_FIELDS:
+                required = field_name != "adj_close_price"
+                normalized_data[field_name] = self._parse_price(
+                    value,
+                    field_name,
+                    required=required
+                )
+            elif field_name == "volume":
+                normalized_data[field_name] = self._parse_volume(value)
+
+        return normalized_data
+
+    def _validate_known_fields(self, data: dict[str, Any]) -> None:
+        """Reject unsupported fields before persistence."""
+
+        allowed_fields = self._FIELD_NAMES | {"id"}
+        unknown_fields = set(data) - allowed_fields
+        if unknown_fields:
+            joined_fields = ", ".join(sorted(unknown_fields))
+            raise ValueError(f"Unknown stock quote fields: {joined_fields}")
+
+    def _ensure_dict(self, data: dict[str, Any]) -> None:
+        """Ensure GUI payloads are dictionaries."""
+
+        if not isinstance(data, dict):
+            raise TypeError("Stock quote payload must be a dictionary")
+
+    def _parse_date(
+        self,
+        value: date | datetime | str,
+        field_name: str
+    ) -> date:
+        """Parse a contract date value."""
+
+        if self._is_blank(value):
+            raise ValueError(f"{field_name} is required")
+        if isinstance(value, datetime):
+            return value.date()
+        if isinstance(value, date):
+            return value
+        if isinstance(value, str):
+            normalized_value = value.strip()
+            if not self._DATE_PATTERN.fullmatch(normalized_value):
+                raise ValueError(
+                    f"{field_name} must use YYYY-MM-DD format"
+                )
+            try:
+                return date.fromisoformat(normalized_value)
+            except ValueError as exc:
+                raise ValueError(
+                    f"{field_name} must use YYYY-MM-DD format"
+                ) from exc
+
+        raise TypeError(f"{field_name} must be a date or YYYY-MM-DD string")
+
+    def _parse_price(
+        self,
+        value: Any,
+        field_name: str,
+        *,
+        required: bool
+    ) -> float | None:
+        """Parse and validate a non-negative price."""
+
+        if self._is_blank(value):
+            if required:
+                raise ValueError(f"{field_name} is required")
+            return None
+        if isinstance(value, bool):
+            raise TypeError(f"{field_name} must be a number")
+
+        try:
+            number = float(value)
+        except (TypeError, ValueError) as exc:
+            raise TypeError(f"{field_name} must be a number") from exc
+
+        if not math.isfinite(number):
+            raise ValueError(f"{field_name} must be a finite number")
+        if number < 0:
+            raise ValueError(f"{field_name} must not be negative")
+
+        return number
+
+    def _parse_volume(self, value: Any) -> int:
+        """Parse and validate a non-negative volume."""
+
+        if self._is_blank(value):
+            raise ValueError("volume is required")
+        if isinstance(value, bool):
+            raise TypeError("volume must be an integer")
+        if isinstance(value, Decimal):
+            if not value.is_finite() or value != value.to_integral_value():
+                raise ValueError("volume must be an integer")
+            volume = int(value)
+        elif isinstance(value, float):
+            if not value.is_integer():
+                raise ValueError("volume must be an integer")
+            volume = int(value)
+        else:
+            try:
+                volume = int(value)
+            except (TypeError, ValueError) as exc:
+                raise TypeError("volume must be an integer") from exc
+
+        if volume < 0:
+            raise ValueError("volume must not be negative")
+
+        return volume
+
+    def _ensure_trade_date_available(
+        self,
+        repo: StockQuoteRepository,
+        trade_date: date,
+        *,
+        current_quote_id: int | None = None
+    ) -> None:
+        """Ensure a quote date does not duplicate another record."""
+
+        existing_quote = repo.get_by_trade_date(trade_date)
+        if existing_quote is None:
+            return
+        is_current_quote = (
+            current_quote_id is not None
+            and existing_quote.id == current_quote_id
+        )
+        if is_current_quote:
+            return
+
+        raise ValueError("trade_date already exists")
+
+    def _serialize_number(self, value: Decimal | float | int) -> float:
+        """Serialize SQLAlchemy numeric values for the GUI."""
+
+        return float(value)
+
+    def _serialize_optional_number(
+        self,
+        value: Decimal | float | int | None
+    ) -> float | None:
+        """Serialize optional SQLAlchemy numeric values for the GUI."""
+
+        if value is None:
+            return None
+
+        return float(value)
+
+    def _is_blank(self, value: Any) -> bool:
+        """Return whether a GUI field value is empty."""
+
+        return (
+            value is None
+            or (isinstance(value, str) and value.strip() == "")
+        )
 
     def _to_dataframe(self, quotes: list[StockQuote]) -> pd.DataFrame:
         """Convert ORM entities to pandas DataFrame.

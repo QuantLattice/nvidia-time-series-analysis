@@ -1,14 +1,15 @@
 @echo off
 setlocal
+pushd "%~dp0\..\..\.."
 
-set "LOG_INFO=[INFO]"
-set "LOG_SUCCESS=[SUCCESS]"
+where py >nul 2>nul
+if %ERRORLEVEL% EQU 0 (
+    py -3 -m work.setup.setup_manager clear-files %*
+) else (
+    python -m work.setup.setup_manager clear-files %*
+)
+set "EXIT_CODE=%ERRORLEVEL%"
 
-echo %LOG_INFO% Clearing generated files...
-
-del /q "%~dp0..\..\output\*" 2>nul
-del /q "%~dp0..\..\graphics\*" 2>nul
-del /q "%~dp0..\..\logs\*" 2>nul
-
-echo %LOG_SUCCESS% Generated files cleared
-exit /b 0
+popd
+endlocal
+exit /b %EXIT_CODE%

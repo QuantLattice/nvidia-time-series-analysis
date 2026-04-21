@@ -1,242 +1,156 @@
-# NVIDIA Stock Analyzer — Setup System Documentation
+# NVIDIA Stock Analyzer - Setup System Documentation
 
 ## Overview
 
-This directory contains all automation scripts responsible for:
-- project installation
-- database initialization
-- environment configuration
-- system reset and cleanup
+The setup system is cross-platform:
 
-The setup system is designed to ensure **fully reproducible installation** on any Windows 10 machine with Anaconda + MySQL installed.
+- Windows 10 uses `.bat` wrappers.
+- macOS uses `.sh` wrappers.
+- The real setup logic lives in `work/setup/setup_manager.py`.
+- The project can also be controlled from one entry point:
+  `work/scripts/main.py`.
 
-All scripts are written in Windows Batch (`.bat`) and follow a modular execution model.
-
----
-
-# ⚙️ Directory Structure
-
-```
-setup/
-│   install.bat                  → Full system installation entry point
-│   reset.bat                    → Full system reset entry point
-│   README_SETUP.MD              → This documentation file
-│
-├── db/                          → Database management utilities
-│   ├── check_mysql.bat          → Validates MySQL connection
-│   ├── create_mysql_config.bat  → Generates MySQL config from .env
-│   ├── init_db.bat              → Creates application database
-│   ├── reset_db.bat             → Drops application database
-│
-├── install/
-│   ├── post_install.bat         → Post-installation verification checks
-│
-└── reset/
-├── clear_files.bat          → Removes generated outputs (logs, charts, reports)
-```
----
-
-# 🚀 Installation Flow
-
-## ▶ Entry Point
-
-```
-install.bat
-```
-
-This script performs a full automated installation of the system.
-
-### Execution Steps:
-
-### 1. MySQL Configuration Setup
-```
-db/create_mysql_config.bat
-```
-
-- Reads environment variables from `.env`
-- Generates MySQL client configuration file (`mysql.cnf`)
-- Used for secure database access without hardcoded credentials
+The wrappers are intentionally thin. They only move to the project root and
+call the Python setup manager.
 
 ---
 
-### 2. MySQL Connection Check
-```
-db/check_mysql.bat
-```
+## Requirements
 
-- Validates that MySQL server is running
-- Tests authentication using generated config
-- Ensures database access is available before initialization
+Both Windows and macOS need:
 
----
+- Python 3
+- project dependencies installed from `requirements.txt`
+- MySQL server
+- MySQL client command available in `PATH` as `mysql`
+- `.env` file in the project root
 
-### 3. Database Initialization
-```
-db/init_db.bat
-```
+Example `.env`:
 
-- Creates the main application database:
-```
-nvidia_timeseries
-```
-- Applies UTF-8 encoding (`utf8mb4`)
-- Safe to run multiple times (idempotent)
-
----
-
-### 4. Post-Installation Verification
-```
-install/post_install.bat
-```
-
-- Verifies:
-  - MySQL configuration existence
-  - Database creation status
-  - Project structure integrity
-
----
-
-# 🔁 Reset Flow
-
-## ▶ Entry Point
-
-```
-reset.bat
-```
-
-This script performs a full system reset.
-
-### WARNING:
-This operation is destructive and removes all application data.
-
----
-
-### Reset Steps:
-
-### 1. MySQL Configuration Preparation
-```
-db/create_mysql_config.bat
-```
-
-Ensures database access before reset operations.
-
----
-
-### 2. Database Removal
-```
-db/reset_db.bat
-```
-
-- Drops database:
-```
-nvidia_timeseries
-```
-- Fully removes all stored financial data
-
----
-
-### 3. Workspace Cleanup
-```
-reset/clear_files.bat
-```
-
-Deletes all generated runtime artifacts:
-
-- `/output` (CSV reports)
-- `/graphics` (charts, plots)
-- `/logs` (runtime logs)
-
----
-
-# 🧩 Database Utilities
-
-## check_mysql.bat
-
-### Purpose:
-Validates MySQL connectivity.
-
-### Behavior:
-- Checks existence of `mysql.cnf`
-- Executes test query:
-```sql
-  SELECT 1;
-```
-
-* Returns success/failure status
-
-## create_mysql_config.bat
-
-### Purpose:
-
-Securely generates MySQL configuration file.
-
-### Input:
-
-`.env` file in project root:
-
-```
+```env
 MYSQL_USER=root
-MYSQL_PASSWORD=****
+MYSQL_PASSWORD=your_password
 MYSQL_HOST=localhost
 MYSQL_PORT=3306
+MYSQL_DB=nvidia_timeseries
 ```
 
-### Output:
-
-```
-config/mysql.cnf
-```
-
-Used by all database scripts.
+`MYSQL_DB` is optional. If it is not set, `nvidia_timeseries` is used.
 
 ---
 
-## init_db.bat
+## Single Entry Point
 
-### Purpose:
-
-Creates application database.
-
-### SQL:
-
-```sql
-CREATE DATABASE IF NOT EXISTS nvidia_timeseries
-CHARACTER SET utf8mb4
-COLLATE utf8mb4_unicode_ci;
-```
-
----
-
-## reset_db.bat
-
-### Purpose:
-
-Drops application database.
-
-### SQL:
-
-```sql
-DROP DATABASE IF EXISTS nvidia_timeseries;
-```
-
-# ▶ Usage
-
-## Full Installation
+From the project root:
 
 ```bash
-work/setup/install.bat
+python3 -m work.scripts.main setup
+python3 -m work.scripts.main run
+python3 -m work.scripts.main reset
 ```
 
-## Full Reset
+On Windows, use `python` or `py -3` if `python3` is not available:
+
+```bat
+py -3 -m work.scripts.main setup
+py -3 -m work.scripts.main run
+py -3 -m work.scripts.main reset
+```
+
+Available main commands:
+
+```text
+run                 check application DB startup
+setup               create mysql.cnf, create DB, apply migrations, verify
+reset               drop DB and clear generated files
+db-config           create work/config/mysql.cnf
+db-check            check MySQL connection
+db-init             create application database
+db-reset            drop application database
+clear-files         clear generated output, graphics, and logs
+post-install        verify installation state
+migrate             apply Alembic migrations
+migration-current   show current Alembic revision
+migration-new       create a new Alembic migration
+migration-down      downgrade Alembic migrations
+```
+
+Examples:
 
 ```bash
-work/setup/reset.bat
+python3 -m work.scripts.main db-check
+python3 -m work.scripts.main migration-new add_stock_quotes_table
+python3 -m work.scripts.main migration-down -1
+python3 -m work.scripts.main reset --yes
 ```
 
 ---
 
-# 📌 Notes
+## Windows 10 Wrappers
 
-* These scripts are intended for **local development and academic deployment**
-* They simulate production-grade initialization pipelines
-* All scripts are safe to re-run unless explicitly performing reset operations
+Run from Command Prompt or PowerShell:
+
+```bat
+work\setup\install.bat
+work\setup\reset.bat
+work\setup\db\create_mysql_config.bat
+work\setup\db\check_mysql.bat
+work\setup\db\init_db.bat
+work\setup\db\reset_db.bat
+work\setup\db\apply_migrations.bat
+work\setup\db\alembic_upgrade.bat
+work\setup\db\alembic_current.bat
+work\setup\db\alembic_revision.bat add_stock_quotes_table
+work\setup\db\alembic_downgrade.bat -1
+work\setup\reset\clear_files.bat
+work\setup\install\post_install.bat
+```
+
+---
+
+## macOS Wrappers
+
+Run from Terminal:
+
+```bash
+./work/setup/install.sh
+./work/setup/reset.sh
+./work/setup/db/create_mysql_config.sh
+./work/setup/db/check_mysql.sh
+./work/setup/db/init_db.sh
+./work/setup/db/reset_db.sh
+./work/setup/db/alembic_upgrade.sh
+./work/setup/db/alembic_current.sh
+./work/setup/db/alembic_revision.sh add_stock_quotes_table
+./work/setup/db/alembic_downgrade.sh -1
+./work/setup/reset/clear_files.sh
+./work/setup/install/post_install.sh
+```
+
+---
+
+## Install Flow
+
+`setup` / `install` performs:
+
+1. Generate `work/config/mysql.cnf` from `.env`.
+2. Check MySQL connection.
+3. Create the application database.
+4. Apply Alembic migrations.
+5. Verify project and database state.
+
+---
+
+## Reset Flow
+
+`reset` performs:
+
+1. Ask for confirmation unless `--yes` is used.
+2. Generate `work/config/mysql.cnf` from `.env`.
+3. Drop the application database.
+4. Clear generated files from:
+   - `work/output`
+   - `work/graphics`
+   - `work/logs`
+
+This operation removes application data from the configured database.

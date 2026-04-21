@@ -1,20 +1,15 @@
 @echo off
-title Alembic Current Revision
-
 setlocal
-pushd %~dp0\..\..\..
+pushd "%~dp0\..\..\.."
 
-set "LOG_INFO=[INFO]"
-set "LOG_STEP=[STEP]"
-
-echo ======================================
-echo   Alembic - Current Revision
-echo ======================================
-echo.
-
-echo %LOG_STEP% Checking current DB revision...
-alembic current
+where py >nul 2>nul
+if %ERRORLEVEL% EQU 0 (
+    py -3 -m work.setup.setup_manager alembic-current %*
+) else (
+    python -m work.setup.setup_manager alembic-current %*
+)
+set "EXIT_CODE=%ERRORLEVEL%"
 
 popd
 endlocal
-exit /b 0
+exit /b %EXIT_CODE%

@@ -1,14 +1,15 @@
 @echo off
 setlocal
+pushd "%~dp0\..\..\.."
 
-set "LOG_INFO=[INFO]"
-set "LOG_SUCCESS=[SUCCESS]"
+where py >nul 2>nul
+if %ERRORLEVEL% EQU 0 (
+    py -3 -m work.setup.setup_manager post-install %*
+) else (
+    python -m work.setup.setup_manager post-install %*
+)
+set "EXIT_CODE=%ERRORLEVEL%"
 
-echo %LOG_INFO% Verifying installation state...
-
-echo %LOG_INFO% - MySQL config exists
-echo %LOG_INFO% - Database created
-echo %LOG_INFO% - Project structure ready
-
-echo %LOG_SUCCESS% Verification completed
-exit /b 0
+popd
+endlocal
+exit /b %EXIT_CODE%

@@ -1,19 +1,15 @@
 @echo off
-title Apply Alembic Migrations
-
 setlocal
-pushd %~dp0..\..\..\
+pushd "%~dp0\..\..\.."
 
-echo [STEP] Applying database migrations...
-alembic upgrade head
-
-if errorlevel 1 (
-    echo [ERROR] Failed to apply migrations
-    popd
-    exit /b 1
+where py >nul 2>nul
+if %ERRORLEVEL% EQU 0 (
+    py -3 -m work.setup.setup_manager alembic-upgrade %*
+) else (
+    python -m work.setup.setup_manager alembic-upgrade %*
 )
+set "EXIT_CODE=%ERRORLEVEL%"
 
-echo [SUCCESS] Migrations applied successfully
 popd
 endlocal
-exit /b 0
+exit /b %EXIT_CODE%
