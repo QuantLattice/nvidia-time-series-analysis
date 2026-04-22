@@ -6,8 +6,10 @@ and provides a clean abstraction over SQLAlchemy session operations.
 """
 
 
-from sqlalchemy.orm import Session
 from datetime import date
+from collections.abc import Iterable
+
+from sqlalchemy.orm import Session
 
 from work.scripts.db.models import StockQuote
 
@@ -35,6 +37,17 @@ class StockQuoteRepository:
 
         self.session = session
 
+    _UPDATABLE_FIELDS = {
+        "trade_date",
+        "source",
+        "open_price",
+        "high_price",
+        "low_price",
+        "close_price",
+        "adj_close_price",
+        "volume",
+    }
+
     def get_all(self) -> list[StockQuote]:
         """Retrieve all stock quote records.
 
@@ -44,7 +57,11 @@ class StockQuoteRepository:
             List of all stored stock quotes.
         """
 
-        return self.session.query(StockQuote).all()
+        return (
+            self.session.query(StockQuote)
+            .order_by(StockQuote.trade_date.asc())
+            .all()
+        )
 
     def get_by_date_range(
         self,
@@ -88,7 +105,25 @@ class StockQuoteRepository:
 
         return self.session.get(StockQuote, quote_id)
 
-    def add(self, quote: StockQuote) -> None:
+    def get_by_trade_date(self, trade_date: date) -> StockQuote | None:
+        """Retrieve the first stock quote with the given trade date."""
+
+        return (
+            self.session.query(StockQuote)
+            .filter(StockQuote.trade_date == trade_date)
+            .first()
+        )
+
+    def get_by_source(self, source: str) -> StockQuote | None:
+        """Retrieve the first stock quote with the given source."""
+
+        return (
+            self.session.query(StockQuote)
+            .filter(StockQuote.source == source)
+            .first()
+        )
+
+    def add(self, quote: StockQuote) -> StockQuote:
         """Add a new stock quote to the session.
 
         Parameters
@@ -98,8 +133,11 @@ class StockQuoteRepository:
         """
 
         self.session.add(quote)
+        self.session.flush()
+        self.session.refresh(quote)
+        return quote
 
-    def bulk_add(self, quotes: list[StockQuote]) -> None:
+    def bulk_add(self, quotes: Iterable[StockQuote]) -> list[StockQuote]:
         """Add multiple stock quotes to the session.
 
         Parameters
@@ -108,9 +146,14 @@ class StockQuoteRepository:
             List of ORM entities to be added.
         """
 
-        self.session.add_all(quotes)
+        quote_list = list(quotes)
+        self.session.add_all(quote_list)
+        self.session.flush()
+        for quote in quote_list:
+            self.session.refresh(quote)
+        return quote_list
 
-    def update(self, quote: StockQuote) -> None:
+    def update(self, quote: StockQuote) -> StockQuote:
         """Update an existing stock quote entity.
 
         Parameters
@@ -119,13 +162,16 @@ class StockQuoteRepository:
             Modified ORM entity.
         """
 
-        self.session.merge(quote)
+        merged_quote = self.session.merge(quote)
+        self.session.flush()
+        self.session.refresh(merged_quote)
+        return merged_quote
 
     def update_by_id(
         self,
         quote_id: int,
         **fields  # type: ignore
-    ) -> None:
+    ) -> StockQuote | None:
         """Update stock quote fields by primary key.
 
         Parameters
@@ -136,11 +182,23 @@ class StockQuoteRepository:
             Key-value pairs of fields to update.
         """
 
-        self.session.query(StockQuote).filter(
-            StockQuote.id == quote_id
-        ).update(fields, synchronize_session=False)  # type: ignore
+        unknown_fields = set(fields) - self._UPDATABLE_FIELDS
+        if unknown_fields:
+            unknown = ", ".join(sorted(unknown_fields))
+            raise ValueError(f"Unknown stock quote fields: {unknown}")
 
-    def delete(self, quote: StockQuote) -> None:
+        quote = self.get_by_id(quote_id)
+        if quote is None:
+            return None
+
+        for field_name, value in fields.items():
+            setattr(quote, field_name, value)
+
+        self.session.flush()
+        self.session.refresh(quote)
+        return quote
+
+    def delete(self, quote: StockQuote) -> bool:
         """Delete a stock quote entity.
 
         Parameters
@@ -150,8 +208,10 @@ class StockQuoteRepository:
         """
 
         self.session.delete(quote)
+        self.session.flush()
+        return True
 
-    def delete_by_id(self, quote_id: int) -> None:
+    def delete_by_id(self, quote_id: int) -> bool:
         """Delete stock quote by primary key.
 
         Parameters
@@ -162,5 +222,8 @@ class StockQuoteRepository:
 
         obj = self.get_by_id(quote_id)
 
-        if obj is not None:
-            self.delete(obj)
+        if obj is None:
+            return False
+
+        self.delete(obj)
+        return True

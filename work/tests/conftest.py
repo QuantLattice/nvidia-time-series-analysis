@@ -8,10 +8,17 @@ Fixtures provided here are automatically discovered by pytest.
 """
 
 
-from work.tests.fixtures import valid_df, raw_df
+from work.tests.fixtures import (
+    controller,
+    created_quote_ids,
+    raw_df,
+    valid_df,
+)
 
 
 __all__ = [
     "valid_df",
     "raw_df",
+    "controller",
+    "created_quote_ids",
 ]

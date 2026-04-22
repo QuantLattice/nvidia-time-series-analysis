@@ -9,9 +9,15 @@ data handling logic.
 
 
 from work.tests.fixtures.dataframes import valid_df, raw_df
+from work.tests.fixtures.controller import (
+    controller,
+    created_quote_ids,
+)
 
 
 __all__ = [
     "valid_df",
     "raw_df",
+    "controller",
+    "created_quote_ids",
 ]

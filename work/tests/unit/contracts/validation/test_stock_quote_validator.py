@@ -113,3 +113,13 @@ def test_negative_volume(valid_df: pd.DataFrame) -> None:
 
     with pytest.raises(ValueError, match="Negative volume"):
         StockQuoteValidator.validate(df)
+
+
+@pytest.mark.unit
+def test_duplicate_source(valid_df: pd.DataFrame) -> None:
+    """Reject duplicate source values."""
+    df = valid_df.copy()
+    df[S.SOURCE] = ["https://example.com/duplicate"] * len(df)
+
+    with pytest.raises(ValueError, match="Duplicate values"):
+        StockQuoteValidator.validate(df)

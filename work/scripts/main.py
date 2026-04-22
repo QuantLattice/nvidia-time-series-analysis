@@ -1,19 +1,16 @@
-from sqlalchemy import text
+"""Project command-line entry point."""
 
-from work.scripts.db.session import Database
+from __future__ import annotations
 
+from pathlib import Path
+import sys
 
-def main() -> None:
-    db = Database()
+if __package__ in {None, ""}:
+    project_root = Path(__file__).resolve().parents[2]
+    sys.path.insert(0, str(project_root))
 
-    with db.session() as session:
-        result = session.execute(text("SELECT 1"))
-
-        value = result.scalar()
-
-        print("Database connection successful ✔")
-        print(f"Query result: {value}")
+from work.scripts.cli import main
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

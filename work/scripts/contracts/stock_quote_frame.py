@@ -39,6 +39,11 @@ class StockQuoteFrame:
         return self._df[S.TRADE_DATE]
 
     @property
+    def source(self) -> pd.Series:
+        """Source column."""
+        return self._df[S.SOURCE]
+
+    @property
     def open_price(self) -> pd.Series:
         """Open price column."""
         return self._df[S.OPEN_PRICE]

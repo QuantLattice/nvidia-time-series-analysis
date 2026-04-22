@@ -82,6 +82,7 @@ class CSVImportService:
         quotes = [
             StockQuote(
                 trade_date=row[S.TRADE_DATE],
+                source=row[S.SOURCE],
                 open_price=row[S.OPEN_PRICE],
                 high_price=row[S.HIGH_PRICE],
                 low_price=row[S.LOW_PRICE],

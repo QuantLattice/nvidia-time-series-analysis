@@ -29,6 +29,9 @@ class StockQuoteSchema:
     """Trading date of the stock record."""
     TRADE_DATE = "trade_date"
 
+    """Unique source identifier or URL for the stock record."""
+    SOURCE = "source"
+
     """Opening price of the stock for the trading day."""
     OPEN_PRICE = "open_price"
 
@@ -54,6 +57,7 @@ class StockQuoteSchema:
     """Complete ordered list of all dataset columns."""
     ALL_COLUMNS = [
         TRADE_DATE,
+        SOURCE,
         OPEN_PRICE,
         HIGH_PRICE,
         LOW_PRICE,
@@ -84,6 +88,7 @@ class StockQuoteSchema:
     """
     REQUIRED_COLUMNS = [
         TRADE_DATE,
+        SOURCE,
         OPEN_PRICE,
         HIGH_PRICE,
         LOW_PRICE,
