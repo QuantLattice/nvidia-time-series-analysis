@@ -4,21 +4,20 @@ This module provides a high-level API over the repository layer and converts
 ORM entities into pandas DataFrames for analytical processing.
 """
 
-
-from datetime import date, datetime
-from decimal import Decimal
 import math
 import re
+from datetime import date, datetime
+from decimal import Decimal
 from typing import Any
 
 import pandas as pd
 
+from work.scripts.contracts import StockQuoteSchema as S
+from work.scripts.db.models import StockQuote
 from work.scripts.db.session import Database
 from work.scripts.repositories.stock_quote_repository import (
     StockQuoteRepository
 )
-from work.scripts.db.models import StockQuote
-from work.scripts.contracts import StockQuoteSchema as S
 
 
 class StockQuoteService:
@@ -36,6 +35,7 @@ class StockQuoteService:
     _DATE_PATTERN = re.compile(r"^\d{4}-\d{2}-\d{2}$")
     _FIELD_NAMES = {
         "trade_date",
+        "source",
         "open_price",
         "high_price",
         "low_price",
@@ -45,6 +45,7 @@ class StockQuoteService:
     }
     _REQUIRED_CREATE_FIELDS = {
         "trade_date",
+        "source",
         "open_price",
         "high_price",
         "low_price",
@@ -76,14 +77,14 @@ class StockQuoteService:
         quote = self._to_entity(data)
         with self.db.session() as session:
             repo = StockQuoteRepository(session)
-            self._ensure_trade_date_available(repo, quote.trade_date)
+            self._ensure_source_available(repo, quote.source)
             created_quote = repo.add(quote)
             return self._to_dict(created_quote)
 
     def update_quote_by_id(
-        self,
-        quote_id: int,
-        data: dict[str, Any]
+            self,
+            quote_id: int,
+            data: dict[str, Any]
     ) -> dict[str, Any] | None:
         """Update a stock quote by id and return the updated record."""
 
@@ -101,6 +102,12 @@ class StockQuoteService:
                 self._ensure_trade_date_available(
                     repo,
                     normalized_data["trade_date"],
+                    current_quote_id=quote_id
+                )
+            if "source" in normalized_data:
+                self._ensure_source_available(
+                    repo,
+                    normalized_data["source"],
                     current_quote_id=quote_id
                 )
 
@@ -139,9 +146,9 @@ class StockQuoteService:
             ]
 
     def get_quotes_by_date_range(
-        self,
-        start_date: date | datetime | str,
-        end_date: date | datetime | str
+            self,
+            start_date: date | datetime | str,
+            end_date: date | datetime | str
     ) -> list[dict[str, Any]]:
         """Return stock quotes within an inclusive date range."""
 
@@ -177,9 +184,9 @@ class StockQuoteService:
             return self._to_dataframe(quotes)
 
     def get_quotes_by_date_range_df(
-        self,
-        start_date: date,
-        end_date: date
+            self,
+            start_date: date,
+            end_date: date
     ) -> pd.DataFrame:
         """Retrieve stock quotes within a date range as DataFrame.
 
@@ -265,6 +272,7 @@ class StockQuoteService:
         return {
             "id": entity.id,
             "trade_date": entity.trade_date.isoformat(),
+            "source": entity.source,
             "open_price": self._serialize_number(entity.open_price),
             "high_price": self._serialize_number(entity.high_price),
             "low_price": self._serialize_number(entity.low_price),
@@ -276,8 +284,8 @@ class StockQuoteService:
         }
 
     def _normalize_create_data(
-        self,
-        data: dict[str, Any]
+            self,
+            data: dict[str, Any]
     ) -> dict[str, Any]:
         """Normalize and validate a create payload."""
 
@@ -300,8 +308,8 @@ class StockQuoteService:
         return normalized_data
 
     def _normalize_update_data(
-        self,
-        data: dict[str, Any]
+            self,
+            data: dict[str, Any]
     ) -> dict[str, Any]:
         """Normalize and validate an update payload."""
 
@@ -321,6 +329,8 @@ class StockQuoteService:
                     value,
                     field_name
                 )
+            elif field_name == "source":
+                normalized_data[field_name] = self._parse_source(value)
             elif field_name in self._PRICE_FIELDS:
                 required = field_name != "adj_close_price"
                 normalized_data[field_name] = self._parse_price(
@@ -349,9 +359,9 @@ class StockQuoteService:
             raise TypeError("Stock quote payload must be a dictionary")
 
     def _parse_date(
-        self,
-        value: date | datetime | str,
-        field_name: str
+            self,
+            value: date | datetime | str,
+            field_name: str
     ) -> date:
         """Parse a contract date value."""
 
@@ -377,11 +387,11 @@ class StockQuoteService:
         raise TypeError(f"{field_name} must be a date or YYYY-MM-DD string")
 
     def _parse_price(
-        self,
-        value: Any,
-        field_name: str,
-        *,
-        required: bool
+            self,
+            value: Any,
+            field_name: str,
+            *,
+            required: bool
     ) -> float | None:
         """Parse and validate a non-negative price."""
 
@@ -430,26 +440,42 @@ class StockQuoteService:
 
         return volume
 
-    def _ensure_trade_date_available(
-        self,
-        repo: StockQuoteRepository,
-        trade_date: date,
-        *,
-        current_quote_id: int | None = None
-    ) -> None:
-        """Ensure a quote date does not duplicate another record."""
+    def _parse_source(self, value: Any) -> str:
+        """Parse and validate a unique source string."""
 
-        existing_quote = repo.get_by_trade_date(trade_date)
+        if self._is_blank(value):
+            raise ValueError("source is required")
+        if not isinstance(value, str):
+            raise TypeError("source must be a string")
+
+        source = value.strip()
+        if not source:
+            raise ValueError("source is required")
+        if len(source) > 512:
+            raise ValueError("source must be 512 characters or fewer")
+
+        return source
+
+    def _ensure_source_available(
+            self,
+            repo: StockQuoteRepository,
+            source: str,
+            *,
+            current_quote_id: int | None = None
+    ) -> None:
+        """Ensure a source does not duplicate another record."""
+
+        existing_quote = repo.get_by_source(source)
         if existing_quote is None:
             return
         is_current_quote = (
-            current_quote_id is not None
-            and existing_quote.id == current_quote_id
+                current_quote_id is not None
+                and existing_quote.id == current_quote_id
         )
         if is_current_quote:
             return
 
-        raise ValueError("trade_date already exists")
+        raise ValueError("source already exists")
 
     def _serialize_number(self, value: Decimal | float | int) -> float:
         """Serialize SQLAlchemy numeric values for the GUI."""
@@ -457,8 +483,8 @@ class StockQuoteService:
         return float(value)
 
     def _serialize_optional_number(
-        self,
-        value: Decimal | float | int | None
+            self,
+            value: Decimal | float | int | None
     ) -> float | None:
         """Serialize optional SQLAlchemy numeric values for the GUI."""
 
@@ -471,8 +497,8 @@ class StockQuoteService:
         """Return whether a GUI field value is empty."""
 
         return (
-            value is None
-            or (isinstance(value, str) and value.strip() == "")
+                value is None
+                or (isinstance(value, str) and value.strip() == "")
         )
 
     def _to_dataframe(self, quotes: list[StockQuote]) -> pd.DataFrame:
@@ -493,6 +519,7 @@ class StockQuoteService:
             [
                 {
                     S.TRADE_DATE: q.trade_date,
+                    S.SOURCE: q.source,
                     S.OPEN_PRICE: float(q.open_price),
                     S.HIGH_PRICE: float(q.high_price),
                     S.LOW_PRICE: float(q.low_price),

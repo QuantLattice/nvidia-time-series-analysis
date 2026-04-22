@@ -6,7 +6,7 @@ financial time series data for a stock (e.g., NVIDIA).
 
 from datetime import date
 
-from sqlalchemy import Date, Integer, Numeric
+from sqlalchemy import Date, Integer, Numeric, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from work.scripts.db.base import Base
@@ -24,6 +24,8 @@ class StockQuote(Base):
         Unique identifier of the record.
     trade_date : date
         Trading date of the record.
+    source : str
+        Unique source identifier or URL for the record.
     open_price : float
         Opening price.
     high_price : float
@@ -50,6 +52,12 @@ class StockQuote(Base):
         Date,
         nullable=False,
         unique=False
+    )
+
+    source: Mapped[str] = mapped_column(
+        String(length=512),
+        nullable=False,
+        unique=True
     )
 
     open_price: Mapped[float] = mapped_column(

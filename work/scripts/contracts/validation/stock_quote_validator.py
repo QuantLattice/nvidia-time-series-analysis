@@ -40,6 +40,7 @@ class StockQuoteValidator:
         cls._validate_nulls(df)
         cls._validate_business_rules(df)
         cls._validate_volume(df)
+        cls._validate_source(df)
 
     @staticmethod
     def _validate_columns(df: pd.DataFrame) -> None:
@@ -146,3 +147,16 @@ class StockQuoteValidator:
 
         if (df[S.VOLUME] < 0).any():
             raise ValueError("Negative volume detected")
+
+    @staticmethod
+    def _validate_source(df: pd.DataFrame) -> None:
+        """Check that source values are non-empty strings and unique."""
+
+        if not pd.api.types.is_string_dtype(df[S.SOURCE]):
+            raise ValueError(f"{S.SOURCE} must be string")
+
+        if df[S.SOURCE].str.strip().eq("").any():
+            raise ValueError(f"Empty values in {S.SOURCE}")
+
+        if df[S.SOURCE].duplicated().any():
+            raise ValueError(f"Duplicate values in {S.SOURCE}")

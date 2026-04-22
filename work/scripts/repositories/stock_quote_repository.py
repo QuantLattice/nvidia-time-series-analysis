@@ -39,6 +39,7 @@ class StockQuoteRepository:
 
     _UPDATABLE_FIELDS = {
         "trade_date",
+        "source",
         "open_price",
         "high_price",
         "low_price",
@@ -110,6 +111,15 @@ class StockQuoteRepository:
         return (
             self.session.query(StockQuote)
             .filter(StockQuote.trade_date == trade_date)
+            .first()
+        )
+
+    def get_by_source(self, source: str) -> StockQuote | None:
+        """Retrieve the first stock quote with the given source."""
+
+        return (
+            self.session.query(StockQuote)
+            .filter(StockQuote.source == source)
             .first()
         )
 

@@ -11,6 +11,7 @@ class StockQuoteCreate:
     """Complete field set required to create a stock quote."""
 
     trade_date: date
+    source: str
     open_price: float
     high_price: float
     low_price: float
@@ -24,6 +25,7 @@ class StockQuoteUpdate:
     """Partial field set for updating a stock quote."""
 
     trade_date: date | None = None
+    source: str | None = None
     open_price: float | None = None
     high_price: float | None = None
     low_price: float | None = None
@@ -36,6 +38,7 @@ class StockQuoteUpdate:
 
         return {
             "trade_date": self.trade_date,
+            "source": self.source,
             "open_price": self.open_price,
             "high_price": self.high_price,
             "low_price": self.low_price,

@@ -1,15 +1,26 @@
 @echo off
 setlocal
-pushd "%~dp0\..\..\.."
 
-where py >nul 2>nul
-if %ERRORLEVEL% EQU 0 (
-    py -3 -m work.setup.setup_manager reset-db %*
-) else (
-    python -m work.setup.setup_manager reset-db %*
+set "LOG_INFO=[INFO]"
+set "LOG_SUCCESS=[SUCCESS]"
+set "LOG_ERROR=[ERROR]"
+
+set CNF=%~dp0..\..\config\mysql.cnf
+
+if not exist "%CNF%" (
+    echo %LOG_ERROR% MySQL config not found. Run create_mysql_config.bat first.
+    exit /b 1
 )
-set "EXIT_CODE=%ERRORLEVEL%"
 
-popd
-endlocal
-exit /b %EXIT_CODE%
+echo %LOG_INFO% Dropping MySQL database...
+
+mysql --defaults-extra-file="%CNF%" ^
+-e "DROP DATABASE IF EXISTS `nvidia_timeseries`;"
+
+if errorlevel 1 (
+    echo %LOG_ERROR% Failed to drop database
+    exit /b 1
+)
+
+echo %LOG_SUCCESS% Database dropped successfully
+exit /b 0

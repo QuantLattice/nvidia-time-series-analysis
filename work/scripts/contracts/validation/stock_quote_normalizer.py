@@ -50,6 +50,9 @@ class StockQuoteNormalizer:
         if S.TRADE_DATE in df.columns:
             df[S.TRADE_DATE] = pd.to_datetime(df[S.TRADE_DATE], errors="raise")
 
+        if S.SOURCE in df.columns:
+            df[S.SOURCE] = df[S.SOURCE].astype("string").str.strip()
+
         # Convert all numeric price columns to numeric dtype.
         for col in S.NUMERIC_COLUMNS:
             if col in df.columns:
