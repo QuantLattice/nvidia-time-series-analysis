@@ -16,7 +16,7 @@ from external interfaces such as GUI and import pipelines.
 """
 
 
-from work.scripts.dto.stock_quote import (
+from .stock_quote import (
     StockQuoteCreateDTO,
     StockQuoteUpdateDTO,
     StockQuoteDTO
