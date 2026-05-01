@@ -28,15 +28,11 @@ def test_normalization_basic(raw_df: pd.DataFrame) -> None:
     """Normalize dirty raw input into schema-compliant data."""
     df = StockQuoteNormalizer.normalize(raw_df)
 
-    assert list(df.columns) == [
-        S.TRADE_DATE,
-        S.OPEN_PRICE,
-        S.HIGH_PRICE,
-        S.LOW_PRICE,
-        S.CLOSE_PRICE,
-        S.ADJ_CLOSE_PRICE,
-        S.VOLUME,
-    ]
+    missing = set(S.ALL_COLUMNS) - set(df.columns)
+    extra = set(df.columns) - set(S.ALL_COLUMNS)
+
+    assert not missing, f"Missing columns: {missing}"
+    assert not extra, f"Unexpected columns: {extra}"
 
     assert pd.api.types.is_datetime64_any_dtype(df[S.TRADE_DATE])
     assert pd.api.types.is_numeric_dtype(df[S.OPEN_PRICE])
@@ -60,6 +56,7 @@ def test_numeric_conversion() -> None:
     """Convert string-encoded numeric values to numeric dtypes."""
     df = pd.DataFrame({
         S.TRADE_DATE: ["2024-01-01"],
+        S.SOURCE: ["example.com"],
         S.OPEN_PRICE: ["100.5"],
         S.HIGH_PRICE: ["110.5"],
         S.LOW_PRICE: ["90.5"],
@@ -82,13 +79,14 @@ def test_numeric_conversion() -> None:
 def test_drop_na_rows() -> None:
     """Drop rows containing missing values in required columns."""
     df = pd.DataFrame({
-        S.TRADE_DATE: ["2024-01-01", None],
-        S.OPEN_PRICE: ["100", "101"],
-        S.HIGH_PRICE: ["110", "111"],
-        S.LOW_PRICE: ["90", "91"],
-        S.CLOSE_PRICE: ["105", "106"],
-        S.ADJ_CLOSE_PRICE: ["105", "106"],
-        S.VOLUME: ["1000", "2000"],
+        S.TRADE_DATE: ["2024-01-01", None, "2024-01-02"],
+        S.SOURCE: ["example.com", "manually", ""],
+        S.OPEN_PRICE: ["100", "101", "125"],
+        S.HIGH_PRICE: ["110", "111", "115"],
+        S.LOW_PRICE: ["90", "91", "100"],
+        S.CLOSE_PRICE: ["105", "106", "112"],
+        S.ADJ_CLOSE_PRICE: ["105", "106", "110"],
+        S.VOLUME: ["1000", "2000", "11700"],
     })
 
     result = StockQuoteNormalizer.normalize(df)
@@ -105,6 +103,7 @@ def test_column_stripping() -> None:
     """Strip leading and trailing whitespace from column names."""
     df = pd.DataFrame({
         " trade_date ": ["2024-01-01"],
+        "  source": ["exampe.com"],
         " open_price ": ["100"],
         " high_price ": ["110"],
         " low_price ": ["90"],
@@ -128,6 +127,7 @@ def test_invalid_date() -> None:
     """Raise an exception when the trade date cannot be parsed."""
     df = pd.DataFrame({
         S.TRADE_DATE: ["invalid-date"],
+        S.SOURCE: ["example.com"],
         S.OPEN_PRICE: ["100"],
         S.HIGH_PRICE: ["110"],
         S.LOW_PRICE: ["90"],
@@ -145,6 +145,7 @@ def test_invalid_numeric() -> None:
     """Raise an exception when numeric conversion fails."""
     df = pd.DataFrame({
         S.TRADE_DATE: ["2024-01-01"],
+        S.SOURCE: ["example.com"],
         S.OPEN_PRICE: ["bad"],
         S.HIGH_PRICE: ["110"],
         S.LOW_PRICE: ["90"],
@@ -162,6 +163,7 @@ def test_invalid_volume() -> None:
     """Raise an exception when volume cannot be converted to integer."""
     df = pd.DataFrame({
         S.TRADE_DATE: ["2024-01-01"],
+        S.SOURCE: ["example.com"],
         S.OPEN_PRICE: ["100"],
         S.HIGH_PRICE: ["110"],
         S.LOW_PRICE: ["90"],
@@ -183,6 +185,7 @@ def test_optional_adj_close_missing() -> None:
     """Allow normalized data to omit optional adjusted close values."""
     df = pd.DataFrame({
         S.TRADE_DATE: ["2024-01-01"],
+        S.SOURCE: ["example.com"],
         S.OPEN_PRICE: ["100"],
         S.HIGH_PRICE: ["110"],
         S.LOW_PRICE: ["90"],

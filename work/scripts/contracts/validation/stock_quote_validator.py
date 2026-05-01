@@ -72,8 +72,10 @@ class StockQuoteValidator:
         Raises
         ------
         ValueError
-            If trade date is not datetime, numeric columns are not numeric,
-            or integer columns are not integer typed.
+            If trade date is not datetime,
+            or numeric columns are not numeric,
+            or integer columns are not integer typed,
+            or string columns are not string.
         """
 
         if not pd.api.types.is_datetime64_any_dtype(df[S.TRADE_DATE]):
@@ -88,6 +90,11 @@ class StockQuoteValidator:
             if (col in df.columns and
                     not pd.api.types.is_integer_dtype(df[col])):
                 raise ValueError(f"{col} must be integer")
+
+        for col in S.STRING_COLUMNS:
+            if (col in df.columns and
+                    not pd.api.types.is_string_dtype(df[col])):
+                raise ValueError(f"{col} must be string")
 
     @staticmethod
     def _validate_nulls(df: pd.DataFrame) -> None:

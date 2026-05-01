@@ -7,6 +7,9 @@ the entire application, including:
 - pandas DataFrame transformations
 - Analytics and reporting layer
 - Data validation routines
+
+The schema also includes metadata fields (e.g., data source) that allow
+tracking provenance of imported records.
 """
 
 
@@ -14,12 +17,13 @@ class StockQuoteSchema:
     """Column schema for stock price time series dataset.
 
     This class defines standardized column names and grouped subsets of
-    columns used for analytical processing and validation.
+    columns used for analytical processing, validation, and data lineage.
 
     Notes
     -----
     - All attributes are immutable constants.
-    - Used as a single source of truth for dataset structure.
+    - Serves as a single source of truth for dataset structure.
+    - Includes both numerical market data and metadata fields.
     """
 
     # ---------------------------
@@ -28,6 +32,9 @@ class StockQuoteSchema:
 
     """Trading date of the stock record."""
     TRADE_DATE = "trade_date"
+
+    """Data source identifier (e.g., CSV filename, provider name, or URL)."""
+    SOURCE = "source"
 
     """Opening price of the stock for the trading day."""
     OPEN_PRICE = "open_price"
@@ -54,6 +61,7 @@ class StockQuoteSchema:
     """Complete ordered list of all dataset columns."""
     ALL_COLUMNS = [
         TRADE_DATE,
+        SOURCE,
         OPEN_PRICE,
         HIGH_PRICE,
         LOW_PRICE,
@@ -76,6 +84,11 @@ class StockQuoteSchema:
         VOLUME,
     ]
 
+    """Columns representing textual data (e.g., data source identifiers)."""
+    STRING_COLUMNS = [
+        SOURCE,
+    ]
+
     """Minimum required columns for a valid stock dataset.
 
     Notes
@@ -84,6 +97,7 @@ class StockQuoteSchema:
     """
     REQUIRED_COLUMNS = [
         TRADE_DATE,
+        SOURCE,
         OPEN_PRICE,
         HIGH_PRICE,
         LOW_PRICE,

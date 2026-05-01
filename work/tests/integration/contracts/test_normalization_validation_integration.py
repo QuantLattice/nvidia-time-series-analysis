@@ -39,6 +39,7 @@ def test_pipeline_valid_raw_data():
 
     raw_df = pd.DataFrame({
         " trade_date ": ["2024-01-02", "2024-01-01"],
+        " source": ["exampe.com", "manually"],
         "open_price": ["100", "101"],
         "high_price": ["110", "111"],
         "low_price": ["90", "91"],
@@ -112,6 +113,7 @@ def test_pipeline_invalid_ohlc_logic():
 
     raw_df = pd.DataFrame({
         " trade_date ": ["2024-01-01"],
+        "source": ["example.com"],
         "open_price": ["100"],
         "high_price": ["80"],   # invalid
         "low_price": ["90"],    # invalid: high < low
@@ -134,6 +136,7 @@ def test_pipeline_negative_volume():
 
     raw_df = pd.DataFrame({
         " trade_date ": ["2024-01-01"],
+        "source": ["example.com"],
         "open_price": ["100"],
         "high_price": ["110"],
         "low_price": ["90"],
@@ -156,6 +159,7 @@ def test_pipeline_real_world_dirty_csv():
 
     raw_df = pd.DataFrame({
         " trade_date ": ["2024-01-03", "2024-01-01", "2024-01-02"],
+        " source  ": ["manually", "exampe.com", "yolo"],
         " open_price ": ["100", "101", "102"],
         " high_price ": ["110", "111", "112"],
         " low_price ": ["90", "91", "92"],
@@ -180,6 +184,7 @@ def test_pipeline_null_values():
 
     raw_df = pd.DataFrame({
         " trade_date ": ["2024-01-01", None],
+        "source": ["example.com", ""],
         "open_price": ["100", "101"],
         "high_price": ["110", "111"],
         "low_price": ["90", "91"],

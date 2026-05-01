@@ -6,7 +6,6 @@ from alembic import context
 
 from work.scripts.db.session import Database
 from work.scripts.db.base import Base
-import work.scripts.db.models  # type: ignore
 
 
 # this is the Alembic Config object, which provides

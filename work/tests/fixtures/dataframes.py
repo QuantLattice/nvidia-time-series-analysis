@@ -27,6 +27,7 @@ def valid_df():
 
     return pd.DataFrame({
         S.TRADE_DATE: pd.to_datetime(["2024-01-01", "2024-01-02"]),
+        S.SOURCE: ["exampe.com", "manually"],
         S.OPEN_PRICE: [100.0, 101.0],
         S.HIGH_PRICE: [110.0, 111.0],
         S.LOW_PRICE: [90.0, 91.0],
@@ -51,6 +52,7 @@ def raw_df():
 
     return pd.DataFrame({
         " trade_date ": ["2024-01-02", "2024-01-01"],  # spaces + unsorted
+        " source ": ["example.com", "manually"],
         "open_price": ["100", "101"],
         "high_price": ["110", "111"],
         "low_price": ["90", "91"],

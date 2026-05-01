@@ -38,6 +38,7 @@ def main():
     # Create a sample stock quote (simulated trading day)
     quote = StockQuote(
         trade_date=date(2024, 1, 1),
+        source="example.com",
         open_price=100.0,
         high_price=110.0,
         low_price=95.0,
