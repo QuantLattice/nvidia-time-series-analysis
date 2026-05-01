@@ -1,27 +1,49 @@
 """Repository layer for StockQuote database operations.
 
-This module implements a repository pattern for accessing and manipulating
-StockQuote entities in the database. It encapsulates all direct ORM queries
-and provides a clean abstraction over SQLAlchemy session operations.
+This module implements the repository pattern for accessing and
+manipulating StockQuote entities using SQLAlchemy ORM.
+
+The repository encapsulates all direct database interactions and provides
+a clean abstraction over persistence logic, isolating the service layer
+from ORM-specific details.
+
+Responsibilities
+----------------
+- CRUD operations for StockQuote entities
+- Querying data using domain-relevant methods
+- Managing persistence within a given session scope
+
+Notes
+-----
+- This layer operates strictly with ORM models (StockQuote).
+- It does not contain business logic.
+- Transaction management is handled externally (e.g., Database.session).
 """
 
 
 from sqlalchemy.orm import Session
-from datetime import date
 
 from work.scripts.db.models import StockQuote
+
+from datetime import date
+from typing import Optional, List
 
 
 class StockQuoteRepository:
     """Data access layer for StockQuote entity.
 
-    This repository provides CRUD operations and query methods for stock
-    price data stored in the database.
+    Provides methods for creating, reading, updating, and deleting stock
+    quote records in the database.
 
     Parameters
     ----------
     session : Session
         Active SQLAlchemy database session.
+
+    Notes
+    -----
+    - The repository does not commit transactions.
+    - All operations are executed within the provided session.
     """
 
     def __init__(self, session: Session) -> None:
@@ -35,7 +57,94 @@ class StockQuoteRepository:
 
         self.session = session
 
-    def get_all(self) -> list[StockQuote]:
+    # ============================================================
+    # CREATE
+    # ============================================================
+
+    def create(self, quote: StockQuote) -> None:
+        """Add a new stock quote entity to the session.
+
+        Parameters
+        ----------
+        quote : StockQuote
+            ORM entity to be persisted.
+
+        Notes
+        -----
+        The entity is staged for insertion. Commit is handled externally.
+        """
+
+        self.session.add(quote)
+
+    def create_bulk(self, quotes: List[StockQuote]) -> None:
+        """Add multiple stock quote entities to the session.
+
+        Parameters
+        ----------
+        quotes : list[StockQuote]
+            List of ORM entities to be added.
+
+        Notes
+        -----
+        Suitable for batch insert operations.
+        """
+
+        self.session.add_all(quotes)
+
+    # ============================================================
+    # UPDATE
+    # ============================================================
+
+    def update(self, quote: StockQuote) -> None:
+        """Update an existing stock quote entity.
+
+        Parameters
+        ----------
+        quote : StockQuote
+            ORM entity with updated fields.
+
+        Notes
+        -----
+        Uses SQLAlchemy merge to synchronize detached instances.
+        """
+
+        self.session.merge(quote)
+
+    # ============================================================
+    # DELETE
+    # ============================================================
+    def delete(self, quote: StockQuote) -> None:
+        """Delete a stock quote entity.
+
+        Parameters
+        ----------
+        quote : StockQuote
+            ORM entity to be deleted.
+        """
+
+        self.session.delete(quote)
+
+    # ============================================================
+    # READ
+    # ============================================================
+
+    def get_by_id(self, quote_id: int) -> Optional[StockQuote]:
+        """Retrieve a stock quote by its primary key.
+
+        Parameters
+        ----------
+        quote_id : int
+            Identifier of the stock quote.
+
+        Returns
+        -------
+        StockQuote | None
+            Found entity or None if not exists.
+        """
+
+        return self.session.get(StockQuote, quote_id)
+
+    def get_all(self) -> List[StockQuote]:
         """Retrieve all stock quote records.
 
         Returns
@@ -50,7 +159,7 @@ class StockQuoteRepository:
         self,
         start_date: date,
         end_date: date
-    ) -> list[StockQuote]:
+    ) -> List[StockQuote]:
         """Retrieve stock quotes within a date range.
 
         Parameters
@@ -71,96 +180,3 @@ class StockQuoteRepository:
             .filter(StockQuote.trade_date.between(start_date, end_date))
             .all()
         )
-
-    def get_by_id(self, quote_id: int) -> StockQuote | None:
-        """Retrieve a stock quote by its primary key.
-
-        Parameters
-        ----------
-        quote_id : int
-            Identifier of the stock quote.
-
-        Returns
-        -------
-        StockQuote | None
-            Found record or None if not exists.
-        """
-
-        return self.session.get(StockQuote, quote_id)
-
-    def add(self, quote: StockQuote) -> None:
-        """Add a new stock quote to the session.
-
-        Parameters
-        ----------
-        quote : StockQuote
-            ORM entity to be persisted.
-        """
-
-        self.session.add(quote)
-
-    def bulk_add(self, quotes: list[StockQuote]) -> None:
-        """Add multiple stock quotes to the session.
-
-        Parameters
-        ----------
-        quotes : list[StockQuote]
-            List of ORM entities to be added.
-        """
-
-        self.session.add_all(quotes)
-
-    def update(self, quote: StockQuote) -> None:
-        """Update an existing stock quote entity.
-
-        Parameters
-        ----------
-        quote : StockQuote
-            Modified ORM entity.
-        """
-
-        self.session.merge(quote)
-
-    def update_by_id(
-        self,
-        quote_id: int,
-        **fields  # type: ignore
-    ) -> None:
-        """Update stock quote fields by primary key.
-
-        Parameters
-        ----------
-        quote_id : int
-            Identifier of the record to update.
-        **fields
-            Key-value pairs of fields to update.
-        """
-
-        self.session.query(StockQuote).filter(
-            StockQuote.id == quote_id
-        ).update(fields, synchronize_session=False)  # type: ignore
-
-    def delete(self, quote: StockQuote) -> None:
-        """Delete a stock quote entity.
-
-        Parameters
-        ----------
-        quote : StockQuote
-            ORM entity to be deleted.
-        """
-
-        self.session.delete(quote)
-
-    def delete_by_id(self, quote_id: int) -> None:
-        """Delete stock quote by primary key.
-
-        Parameters
-        ----------
-        quote_id : int
-            Identifier of the record to delete.
-        """
-
-        obj = self.get_by_id(quote_id)
-
-        if obj is not None:
-            self.delete(obj)

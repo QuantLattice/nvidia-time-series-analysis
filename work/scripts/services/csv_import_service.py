@@ -1,14 +1,15 @@
 """CSV import pipeline for StockQuote data.
 
-This module implements a complete ETL-style pipeline for importing stock
-market data from CSV files into the database.
+This module implements an ETL (Extract–Transform–Load) pipeline for
+ingesting stock market data from CSV files into the database.
 
-Pipeline stages:
-1. Load raw CSV data
-2. Normalize dataset (data cleaning + type conversion)
-3. Validate dataset (schema + business rules)
-4. Convert DataFrame into ORM objects
-5. Persist data into database via StockQuoteService
+Pipeline Stages
+---------------
+1. Extract   : Load raw CSV data into a pandas DataFrame
+2. Transform : Normalize and clean data (types, formatting, ordering)
+3. Validate  : Enforce schema constraints and business rules
+4. Map       : Convert DataFrame rows into DTO objects
+5. Load      : Persist data via service layer
 """
 
 
@@ -19,19 +20,25 @@ from work.scripts.contracts.validation import (
 )
 from work.scripts.contracts import StockQuoteSchema as S
 from work.scripts.services import StockQuoteService
-from work.scripts.db.models import StockQuote
+from work.scripts.dto import StockQuoteCreateDTO
 
 
 class CSVImportService:
     """Service for importing stock quote data from CSV files.
 
-    This service encapsulates a full ETL pipeline that transforms raw CSV
-    input into validated database records.
+    This service orchestrates a full ETL pipeline that converts raw CSV
+    input into validated database records using DTO-based data transfer.
+
+    Parameters
+    ----------
+    stock_service : StockQuoteService
+        Service responsible for persisting stock quote data.
 
     Notes
     -----
-    The service assumes that input CSV structure is compatible with
-    StockQuoteSchema and will raise errors if validation fails.
+    - Input CSV must conform to StockQuoteSchema.
+    - Validation errors will interrupt the pipeline.
+    - Designed for batch processing of large datasets.
     """
 
     def __init__(self, stock_service: StockQuoteService) -> None:
@@ -47,10 +54,8 @@ class CSVImportService:
     def import_csv(self, path: str) -> None:
         """Import stock quotes from a CSV file into the database.
 
-        This method performs full ETL processing:
-        - Extract: load CSV into DataFrame
-        - Transform: normalize and validate data
-        - Load: convert to ORM objects and persist
+        This method executes the full ETL pipeline:
+        extract → transform → validate → map → load
 
         Parameters
         ----------
@@ -59,10 +64,10 @@ class CSVImportService:
 
         Raises
         ------
+        FileNotFoundError
+            If the CSV file does not exist.
         ValueError
             If normalization or validation fails.
-        FileNotFoundError
-            If CSV file does not exist.
         """
 
         # ---------------------------
@@ -74,13 +79,17 @@ class CSVImportService:
         # TRANSFORM
         # ---------------------------
         df = StockQuoteNormalizer.normalize(df)
+
+        # ---------------------------
+        # VALIDATE
+        # ---------------------------
         StockQuoteValidator.validate(df)
 
         # ---------------------------
-        # LOAD (ORM mapping)
+        # MAP (DataFrame → DTO)
         # ---------------------------
         quotes = [
-            StockQuote(
+            StockQuoteCreateDTO(
                 trade_date=row[S.TRADE_DATE],
                 source=row[S.SOURCE],
                 open_price=row[S.OPEN_PRICE],
@@ -88,10 +97,12 @@ class CSVImportService:
                 low_price=row[S.LOW_PRICE],
                 close_price=row[S.CLOSE_PRICE],
                 adj_close_price=row.get(S.ADJ_CLOSE_PRICE),
-                volume=row[S.VOLUME],
+                volume=row[S.VOLUME]
             )
             for _, row in df.iterrows()
         ]
 
-        # Persist to database using batch insert
-        self.stock_service.add_quote_bulk(quotes)
+        # ---------------------------
+        # LOAD (DTO → DB)
+        # ---------------------------
+        self.stock_service.create_quote_bulk(quotes)
