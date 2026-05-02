@@ -1,17 +1,28 @@
-"""Test data fixtures package.
+"""Test fixtures package.
 
-This package contains reusable pandas DataFrame fixtures used for testing
-data processing, validation, and normalization pipelines.
+This package provides reusable pytest fixtures for:
 
-Fixtures simulate both clean and dirty datasets to ensure robustness of
-data handling logic.
+- pandas DataFrame test datasets
+- database session management
+- in-memory SQLite test environment
 """
 
 
-from work.tests.fixtures.dataframes import valid_df, raw_df
+from .dataframes import (
+    valid_df,
+    raw_df
+)
+from .db import (
+    engine,
+    create_schema,
+    db_session
+)
 
 
 __all__ = [
     "valid_df",
     "raw_df",
+    "engine",
+    "create_schema",
+    "db_session"
 ]
