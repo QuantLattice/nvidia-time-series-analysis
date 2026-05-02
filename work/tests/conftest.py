@@ -1,17 +1,26 @@
-"""Pytest configuration and shared test fixtures.
+"""Pytest global configuration module.
 
-This module exposes commonly used fixtures for the entire test suite.
-It acts as a central registry for reusable test data to avoid duplication
-across test modules.
+This module exposes shared test fixtures that are available across the
+entire test suite.
 
-Fixtures provided here are automatically discovered by pytest.
+It serves as a central entry point for database-related fixtures such as:
+- in-memory SQLAlchemy engine
+- schema creation and teardown hooks
+- transactional test sessions
+
+Pytest discovers this module automatically without explicit imports.
 """
 
 
-from work.tests.fixtures import valid_df, raw_df
+from work.tests.fixtures import (
+    engine,
+    create_schema,
+    db_session
+)
 
 
 __all__ = [
-    "valid_df",
-    "raw_df",
+    "engine",
+    "create_schema",
+    "db_session",
 ]
