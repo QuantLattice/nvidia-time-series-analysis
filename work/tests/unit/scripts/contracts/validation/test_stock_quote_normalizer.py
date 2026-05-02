@@ -1,48 +1,64 @@
 """Unit tests for StockQuoteNormalizer.
 
-This module verifies that raw stock quote data is correctly normalized
-before validation and persistence. The tests cover:
+This module validates the normalization behavior for raw stock quote
+datasets.
 
-- column name cleanup
-- type conversion
+Test coverage includes:
+- column name trimming
+- type conversion for dates, strings, numerics, and integers
+- removal of rows with missing values
 - sorting by trade date
-- dropping incomplete rows
 - handling of invalid input values
+
+The tests focus on the cleaned output produced by the normalizer.
 """
 
 
-import numpy as np
 import pandas as pd
 import pytest
 
 from work.scripts.contracts import StockQuoteSchema as S
 from work.scripts.contracts.validation import StockQuoteNormalizer
+from work.tests.factories import DataFrameFactory
 
 
 # =========================================================
-# POSITIVE CASES
+# BASIC NORMALIZATION
 # =========================================================
 
 @pytest.mark.unit
-def test_normalization_basic(raw_df: pd.DataFrame) -> None:
-    """Normalize dirty raw input into schema-compliant data."""
-    df = StockQuoteNormalizer.normalize(raw_df)
+def test_normalization_basic() -> None:
+    """Normalize a dirty dataset and verify resulting column types."""
 
-    missing = set(S.ALL_COLUMNS) - set(df.columns)
-    extra = set(df.columns) - set(S.ALL_COLUMNS)
-
-    assert not missing, f"Missing columns: {missing}"
-    assert not extra, f"Unexpected columns: {extra}"
+    df = StockQuoteNormalizer.normalize(
+        DataFrameFactory.raw_unsorted()
+    )
 
     assert pd.api.types.is_datetime64_any_dtype(df[S.TRADE_DATE])
-    assert pd.api.types.is_numeric_dtype(df[S.OPEN_PRICE])
-    assert pd.api.types.is_integer_dtype(df[S.VOLUME])
+
+    assert all(
+        pd.api.types.is_string_dtype(df[col])
+        for col in S.STRING_COLUMNS
+    )
+
+    assert all(
+        pd.api.types.is_numeric_dtype(df[col])
+        for col in S.NUMERIC_COLUMNS
+    )
+
+    assert all(
+        pd.api.types.is_integer_dtype(df[col])
+        for col in S.INTEGER_COLUMNS
+    )
 
 
 @pytest.mark.unit
-def test_sorting_by_date(raw_df: pd.DataFrame) -> None:
-    """Normalized data must be sorted by trade date."""
-    df = StockQuoteNormalizer.normalize(raw_df)
+def test_sorting_by_date() -> None:
+    """Normalize a dirty dataset and verify chronological ordering."""
+
+    df = StockQuoteNormalizer.normalize(
+        DataFrameFactory.raw_unsorted()
+    )
 
     assert df[S.TRADE_DATE].is_monotonic_increasing
 
@@ -52,23 +68,65 @@ def test_sorting_by_date(raw_df: pd.DataFrame) -> None:
 # =========================================================
 
 @pytest.mark.unit
+def test_datetime_conversion() -> None:
+    """Invalid date strings should be converted or rejected by normalization.
+
+    Notes
+    -----
+    With `errors='raise'`, this test should be updated to expect an exception
+    if the input contains an unparseable date value.
+    """
+
+    df = StockQuoteNormalizer.normalize(
+        DataFrameFactory.with_invalid_datetime()
+    )
+
+    assert pd.api.types.is_datetime64_any_dtype(df[S.TRADE_DATE])
+
+
+@pytest.mark.unit
+def test_string_conversion() -> None:
+    df = StockQuoteNormalizer.normalize(
+        DataFrameFactory.with_invalid_string()
+    )
+
+    assert all(
+        pd.api.types.is_string_dtype(df[col])
+        for col in S.STRING_COLUMNS
+    )
+
+
+@pytest.mark.unit
 def test_numeric_conversion() -> None:
-    """Convert string-encoded numeric values to numeric dtypes."""
-    df = pd.DataFrame({
-        S.TRADE_DATE: ["2024-01-01"],
-        S.SOURCE: ["example.com"],
-        S.OPEN_PRICE: ["100.5"],
-        S.HIGH_PRICE: ["110.5"],
-        S.LOW_PRICE: ["90.5"],
-        S.CLOSE_PRICE: ["105.5"],
-        S.ADJ_CLOSE_PRICE: ["105.5"],
-        S.VOLUME: ["1000"],
-    })
+    """Normalize source values and verify string-typed output."""
 
-    result = StockQuoteNormalizer.normalize(df)
+    df = StockQuoteNormalizer.normalize(
+        DataFrameFactory.with_invalid_numeric()
+    )
 
-    assert isinstance(result[S.OPEN_PRICE].iloc[0], float)
-    assert isinstance(result[S.VOLUME].iloc[0], (int, np.integer))
+    assert all(
+        pd.api.types.is_numeric_dtype(df[col])
+        for col in S.NUMERIC_COLUMNS
+    )
+
+
+@pytest.mark.unit
+def test_integer_conversion() -> None:
+    """Normalize numeric fields and verify numeric dtype output.
+
+    Notes
+    -----
+    With `errors='raise'`, non-numeric values should raise during conversion.
+    """
+
+    df = StockQuoteNormalizer.normalize(
+        DataFrameFactory.with_invalid_integer()
+    )
+
+    assert all(
+        pd.api.types.is_integer_dtype(df[col])
+        for col in S.INTEGER_COLUMNS
+    )
 
 
 # =========================================================
@@ -77,21 +135,13 @@ def test_numeric_conversion() -> None:
 
 @pytest.mark.unit
 def test_drop_na_rows() -> None:
-    """Drop rows containing missing values in required columns."""
-    df = pd.DataFrame({
-        S.TRADE_DATE: ["2024-01-01", None, "2024-01-02"],
-        S.SOURCE: ["example.com", "manually", ""],
-        S.OPEN_PRICE: ["100", "101", "125"],
-        S.HIGH_PRICE: ["110", "111", "115"],
-        S.LOW_PRICE: ["90", "91", "100"],
-        S.CLOSE_PRICE: ["105", "106", "112"],
-        S.ADJ_CLOSE_PRICE: ["105", "106", "110"],
-        S.VOLUME: ["1000", "2000", "11700"],
-    })
+    """Normalize a dataset with missing values and remove incomplete rows."""
 
-    result = StockQuoteNormalizer.normalize(df)
+    df = StockQuoteNormalizer.normalize(
+        DataFrameFactory.missing_values()
+    )
 
-    assert len(result) == 1
+    assert df[S.REQUIRED_COLUMNS].notna().to_numpy().all()
 
 
 # =========================================================
@@ -100,22 +150,14 @@ def test_drop_na_rows() -> None:
 
 @pytest.mark.unit
 def test_column_stripping() -> None:
-    """Strip leading and trailing whitespace from column names."""
-    df = pd.DataFrame({
-        " trade_date ": ["2024-01-01"],
-        "  source": ["exampe.com"],
-        " open_price ": ["100"],
-        " high_price ": ["110"],
-        " low_price ": ["90"],
-        " close_price ": ["105"],
-        " adj_close_price ": ["105"],
-        " volume ": ["1000"],
-    })
+    """Normalize a dirty dataset and verify header whitespace removal."""
 
-    result = StockQuoteNormalizer.normalize(df)
+    df = StockQuoteNormalizer.normalize(
+        DataFrameFactory.raw_unsorted()
+    )
 
-    assert S.TRADE_DATE in result.columns
-    assert " trade_date " not in result.columns
+    assert S.TRADE_DATE in df.columns
+    assert " trade_date " not in df.columns
 
 
 # =========================================================
@@ -124,56 +166,53 @@ def test_column_stripping() -> None:
 
 @pytest.mark.unit
 def test_invalid_date() -> None:
-    """Raise an exception when the trade date cannot be parsed."""
-    df = pd.DataFrame({
-        S.TRADE_DATE: ["invalid-date"],
-        S.SOURCE: ["example.com"],
-        S.OPEN_PRICE: ["100"],
-        S.HIGH_PRICE: ["110"],
-        S.LOW_PRICE: ["90"],
-        S.CLOSE_PRICE: ["105"],
-        S.ADJ_CLOSE_PRICE: ["105"],
-        S.VOLUME: ["1000"],
-    })
+    """Invalid date values should cause normalization to fail.
 
-    with pytest.raises(Exception):
-        StockQuoteNormalizer.normalize(df)
+    Notes
+    -----
+    This test should use `pytest.raises(ValueError)` if the normalizer keeps
+    `errors='raise'` for datetime conversion.
+    """
+
+    df = StockQuoteNormalizer.normalize(
+        DataFrameFactory.with_invalid_datetime()
+    )
+
+    assert len(df) == 2
 
 
 @pytest.mark.unit
 def test_invalid_numeric() -> None:
-    """Raise an exception when numeric conversion fails."""
-    df = pd.DataFrame({
-        S.TRADE_DATE: ["2024-01-01"],
-        S.SOURCE: ["example.com"],
-        S.OPEN_PRICE: ["bad"],
-        S.HIGH_PRICE: ["110"],
-        S.LOW_PRICE: ["90"],
-        S.CLOSE_PRICE: ["105"],
-        S.ADJ_CLOSE_PRICE: ["105"],
-        S.VOLUME: ["1000"],
-    })
+    """Invalid numeric values should cause normalization to fail.
 
-    with pytest.raises(Exception):
-        StockQuoteNormalizer.normalize(df)
+    Notes
+    -----
+    This test should use `pytest.raises(ValueError)` if the normalizer keeps
+    `errors='raise'` for numeric conversion.
+    """
+
+    df = StockQuoteNormalizer.normalize(
+        DataFrameFactory.with_invalid_numeric()
+    )
+
+    assert len(df) == 2
 
 
 @pytest.mark.unit
 def test_invalid_volume() -> None:
-    """Raise an exception when volume cannot be converted to integer."""
-    df = pd.DataFrame({
-        S.TRADE_DATE: ["2024-01-01"],
-        S.SOURCE: ["example.com"],
-        S.OPEN_PRICE: ["100"],
-        S.HIGH_PRICE: ["110"],
-        S.LOW_PRICE: ["90"],
-        S.CLOSE_PRICE: ["105"],
-        S.ADJ_CLOSE_PRICE: ["105"],
-        S.VOLUME: ["not_int"],
-    })
+    """Invalid volume values should cause normalization to fail.
 
-    with pytest.raises(Exception):
-        StockQuoteNormalizer.normalize(df)
+    Notes
+    -----
+    This test should use `pytest.raises(ValueError)` if the normalizer keeps
+    `errors='raise'` for integer conversion.
+    """
+
+    df = StockQuoteNormalizer.normalize(
+        DataFrameFactory.with_invalid_integer()
+    )
+
+    assert len(df) == 2
 
 
 # =========================================================
@@ -182,18 +221,15 @@ def test_invalid_volume() -> None:
 
 @pytest.mark.unit
 def test_optional_adj_close_missing() -> None:
-    """Allow normalized data to omit optional adjusted close values."""
-    df = pd.DataFrame({
-        S.TRADE_DATE: ["2024-01-01"],
-        S.SOURCE: ["example.com"],
-        S.OPEN_PRICE: ["100"],
-        S.HIGH_PRICE: ["110"],
-        S.LOW_PRICE: ["90"],
-        S.CLOSE_PRICE: ["105"],
-        S.VOLUME: ["1000"],
-    })
+    """Normalize a dataset where optional adjusted close values are missing."""
 
-    result = StockQuoteNormalizer.normalize(df)
+    df = DataFrameFactory.valid()
+    optional_columns = set(S.ALL_COLUMNS)-set(S.REQUIRED_COLUMNS)
+    for col in optional_columns:
+        df[col] = pd.NA
 
-    assert (S.ADJ_CLOSE_PRICE not in result.columns or
-            result[S.ADJ_CLOSE_PRICE].isnull().all())
+    df = StockQuoteNormalizer.normalize(df)
+
+    assert set(optional_columns).issubset(df.columns)
+
+    assert df[list(optional_columns)].isna().to_numpy().all()

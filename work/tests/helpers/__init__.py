@@ -5,7 +5,7 @@ data processing pipelines in tests.
 """
 
 
-from work.tests.helpers.pipelines import run_pipeline
+from .pipelines import run_pipeline
 
 
 __all__ = [

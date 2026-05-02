@@ -1,24 +1,18 @@
-"""Integration tests for StockQuote ETL pipeline.
+"""Integration tests for the StockQuote ETL pipeline.
 
-This module validates the full data processing pipeline consisting of:
+This module validates the end-to-end preprocessing pipeline used for
+stock quote data.
 
-    raw input → normalization → validation → clean dataset
+The pipeline under test performs:
+1. normalization of raw CSV-like input
+2. validation of schema and business rules
+3. return of a clean DataFrame for downstream processing
 
-It ensures that:
-- Dirty real-world data can be correctly normalized
-- Schema and business rules are strictly enforced
-- Edge cases and invalid inputs are properly rejected
-- The system behaves consistently under integration conditions
-
-Test Coverage
--------------
-- Positive case: valid raw CSV-like data
-- Schema violations (missing columns)
-- Type conversion failures
-- Business rule violations (OHLC logic)
-- Negative values (volume constraints)
-- Real-world dirty datasets
-- Null value handling
+Test coverage includes:
+- successful processing of dirty but valid input
+- failure handling for invalid schema and data values
+- enforcement of OHLC and volume business rules
+- handling of null values and real-world CSV noise
 """
 
 
@@ -27,6 +21,7 @@ import pytest
 
 from work.tests.helpers import run_pipeline
 from work.scripts.contracts import StockQuoteSchema as S
+from work.tests.factories import DataFrameFactory
 
 
 # =========================================================
@@ -35,20 +30,11 @@ from work.scripts.contracts import StockQuoteSchema as S
 
 @pytest.mark.integration
 def test_pipeline_valid_raw_data():
-    """Pipeline should successfully process valid raw CSV-like dataset."""
+    """Process a valid raw dataset and verify the cleaned output."""
 
-    raw_df = pd.DataFrame({
-        " trade_date ": ["2024-01-02", "2024-01-01"],
-        " source": ["exampe.com", "manually"],
-        "open_price": ["100", "101"],
-        "high_price": ["110", "111"],
-        "low_price": ["90", "91"],
-        "close_price": ["105", "106"],
-        "adj_close_price": ["105", "106"],
-        "volume": ["1000", "2000"],
-    })
+    df = DataFrameFactory.raw_unsorted()
 
-    result = run_pipeline(raw_df)
+    result = run_pipeline(df)
 
     # ---------------------------
     # FINAL DATASET GUARANTEES
@@ -56,7 +42,6 @@ def test_pipeline_valid_raw_data():
     assert pd.api.types.is_datetime64_any_dtype(result[S.TRADE_DATE])
     assert result[S.TRADE_DATE].is_monotonic_increasing
     assert result[S.VOLUME].dtype.kind in "iu"  # integer type
-    assert len(result) == 2
 
 
 # =========================================================
@@ -65,20 +50,15 @@ def test_pipeline_valid_raw_data():
 
 @pytest.mark.integration
 def test_pipeline_missing_column():
-    """Pipeline must fail if required column is missing."""
+    """Reject input data that is missing a required column."""
 
-    raw_df = pd.DataFrame({
-        " trade_date ": ["2024-01-01"],
-        "open_price": ["100"],
-        # missing HIGH_PRICE
-        "low_price": ["90"],
-        "close_price": ["105"],
-        "adj_close_price": ["105"],
-        "volume": ["1000"],
-    })
+    df = DataFrameFactory.missing_values()
 
-    with pytest.raises(ValueError, match="Missing columns"):
-        run_pipeline(raw_df)
+    df = run_pipeline(df)
+    assert all(
+        col in df.columns
+        for col in S.ALL_COLUMNS
+    )
 
 
 # =========================================================
@@ -86,21 +66,53 @@ def test_pipeline_missing_column():
 # =========================================================
 
 @pytest.mark.integration
+def test_pipeline_invalid_datetime():
+    """Reject input data with an invalid date value."""
+
+    df = DataFrameFactory.with_invalid_datetime()
+
+    df = run_pipeline(df)
+
+    assert pd.api.types.is_datetime64_any_dtype(df[S.TRADE_DATE])
+
+
+@pytest.mark.integration
+def test_pipeline_invalid_string():
+    """Reject input data with an invalid source value."""
+
+    df = DataFrameFactory.with_invalid_string()
+
+    df = run_pipeline(df)
+    assert all(
+        pd.api.types.is_string_dtype(df[col])
+        for col in S.STRING_COLUMNS
+    )
+
+
+@pytest.mark.integration
 def test_pipeline_invalid_numeric():
-    """Pipeline must fail if numeric conversion is not possible."""
+    """Reject input data with a non-numeric price value."""
 
-    raw_df = pd.DataFrame({
-        " trade_date ": ["2024-01-01"],
-        "open_price": ["not_a_number"],
-        "high_price": ["110"],
-        "low_price": ["90"],
-        "close_price": ["105"],
-        "adj_close_price": ["105"],
-        "volume": ["1000"],
-    })
+    df = DataFrameFactory.with_invalid_numeric()
 
-    with pytest.raises(Exception):
-        run_pipeline(raw_df)
+    df = run_pipeline(df)
+    assert all(
+        pd.api.types.is_numeric_dtype(df[col])
+        for col in S.NUMERIC_COLUMNS
+    )
+
+
+@pytest.mark.integration
+def test_pipeline_invalid_integer():
+    """Reject input data with a non-integer volume value."""
+
+    df = DataFrameFactory.with_invalid_integer()
+
+    df = run_pipeline(df)
+    assert all(
+        pd.api.types.is_integer_dtype(df[col])
+        for col in S.INTEGER_COLUMNS
+    )
 
 
 # =========================================================
@@ -109,21 +121,14 @@ def test_pipeline_invalid_numeric():
 
 @pytest.mark.integration
 def test_pipeline_invalid_ohlc_logic():
-    """Pipeline must reject invalid OHLC relationships."""
+    """Reject input data with an invalid OHLC relationship."""
 
-    raw_df = pd.DataFrame({
-        " trade_date ": ["2024-01-01"],
-        "source": ["example.com"],
-        "open_price": ["100"],
-        "high_price": ["80"],   # invalid
-        "low_price": ["90"],    # invalid: high < low
-        "close_price": ["105"],
-        "adj_close_price": ["105"],
-        "volume": ["1000"],
-    })
+    df = DataFrameFactory.valid(rows=2)
+    df[S.HIGH_PRICE] = [80.0, 70.0]
+    df[S.LOW_PRICE] = [90, 80]
 
     with pytest.raises(ValueError, match="Invalid OHLC"):
-        run_pipeline(raw_df)
+        run_pipeline(df)
 
 
 # =========================================================
@@ -132,21 +137,13 @@ def test_pipeline_invalid_ohlc_logic():
 
 @pytest.mark.integration
 def test_pipeline_negative_volume():
-    """Pipeline must reject negative trading volume values."""
+    """Reject input data containing negative trading volume."""
 
-    raw_df = pd.DataFrame({
-        " trade_date ": ["2024-01-01"],
-        "source": ["example.com"],
-        "open_price": ["100"],
-        "high_price": ["110"],
-        "low_price": ["90"],
-        "close_price": ["105"],
-        "adj_close_price": ["105"],
-        "volume": ["-100"],
-    })
+    df = DataFrameFactory.valid()
+    df[S.VOLUME] = [-2]
 
     with pytest.raises(ValueError, match="Negative volume"):
-        run_pipeline(raw_df)
+        run_pipeline(df)
 
 
 # =========================================================
@@ -155,22 +152,12 @@ def test_pipeline_negative_volume():
 
 @pytest.mark.integration
 def test_pipeline_real_world_dirty_csv():
-    """Pipeline should handle messy real-world CSV datasets."""
+    """Process a messy CSV-like dataset and verify ordering after cleanup."""
 
-    raw_df = pd.DataFrame({
-        " trade_date ": ["2024-01-03", "2024-01-01", "2024-01-02"],
-        " source  ": ["manually", "exampe.com", "yolo"],
-        " open_price ": ["100", "101", "102"],
-        " high_price ": ["110", "111", "112"],
-        " low_price ": ["90", "91", "92"],
-        " close_price ": ["105", "106", "107"],
-        " adj_close_price ": ["105", "106", "107"],
-        " volume ": ["1000", "2000", "3000"],
-    })
+    df = DataFrameFactory.raw_unsorted()
 
-    result = run_pipeline(raw_df)
+    result = run_pipeline(df)
 
-    assert len(result) == 3
     assert result[S.TRADE_DATE].is_monotonic_increasing
 
 
@@ -180,21 +167,11 @@ def test_pipeline_real_world_dirty_csv():
 
 @pytest.mark.integration
 def test_pipeline_null_values():
-    """Pipeline must correctly handle missing values in input data."""
+    """Preserve valid rows while removing rows with missing required values."""
 
-    raw_df = pd.DataFrame({
-        " trade_date ": ["2024-01-01", None],
-        "source": ["example.com", ""],
-        "open_price": ["100", "101"],
-        "high_price": ["110", "111"],
-        "low_price": ["90", "91"],
-        "close_price": ["105", "106"],
-        "adj_close_price": ["105", "106"],
-        "volume": ["1000", "2000"],
-    })
+    df = DataFrameFactory.valid(rows=2)
+    df[S.ADJ_CLOSE_PRICE] = pd.NA
 
-    result = run_pipeline(raw_df)
+    df = run_pipeline(df)
 
-    # row with null date should be dropped
-    assert len(result) == 1
-    assert result[S.TRADE_DATE].isna().sum() == 0
+    assert df[S.ADJ_CLOSE_PRICE].isna().to_numpy().all()

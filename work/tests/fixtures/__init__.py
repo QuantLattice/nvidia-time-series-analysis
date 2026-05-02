@@ -1,17 +1,16 @@
 """Test fixtures package.
 
-This package provides reusable pytest fixtures for:
+This package provides reusable pytest fixtures for database testing.
 
-- pandas DataFrame test datasets
-- database session management
-- in-memory SQLite test environment
+Available fixtures include:
+- in-memory SQLite engine
+- schema creation and teardown hooks
+- transactional database sessions
+
+These fixtures are intended for isolated repository and service tests.
 """
 
 
-from .dataframes import (
-    valid_df,
-    raw_df
-)
 from .db import (
     engine,
     create_schema,
@@ -20,9 +19,7 @@ from .db import (
 
 
 __all__ = [
-    "valid_df",
-    "raw_df",
     "engine",
     "create_schema",
-    "db_session"
+    "db_session",
 ]
