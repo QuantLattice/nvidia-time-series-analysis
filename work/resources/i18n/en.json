@@ -1,0 +1,47 @@
+{
+    "menu_bar": {
+        "file_button_text": "File",
+        "help_button_text": "Help",
+        "settings_button_tooltip": "Settings",
+        "display_button_tooltip": "Display panels"
+    },
+    "toolbar": {
+        "data_button_tooltip": "Data",
+        "analysis_button_tooltip": "Analysis",
+        "reports_button_tooltip": "Reports"
+    },
+    "settings_menu": {
+        "language_menu": {
+            "label": "Language"
+        },
+        "scale_menu": {
+            "label": "Scale",
+            "small_label": "Small",
+            "medium_label": "Medium",
+            "big_label": "Big",
+            "very_big_label": "Very big"
+        },
+        "theme_menu": {
+            "label": "Theme",
+            "light_label": "Light",
+            "dark_label": "Dark"
+        },
+        "ttk_theme_menu": {
+            "label": "Tkiner theme"
+        },
+        "font_menu": {
+            "label": "Font",
+            "command_label": "Select font..."
+        },
+        "reset_button": {
+            "label": "Reset settings",
+            "title": "Reset settings",
+            "message": "Reset all UI settings to default?"
+        }
+    },
+    "font_selector_popup": {
+        "title": "Select Font",
+        "example_text": "The quick brown fox jumps over the lazy dog",
+        "apply_button_text": "Apply"
+    }
+}
