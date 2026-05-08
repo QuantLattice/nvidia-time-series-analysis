@@ -1,8 +1,9 @@
 """
 Theme color token definitions.
 
-This module defines the immutable structure used to store
-all color values required by the GUI theme system.
+This module defines immutable color token structures
+used by the GUI theme system for ttk styling and
+application-wide visual consistency.
 """
 
 
@@ -12,7 +13,11 @@ from dataclasses import dataclass
 @dataclass(slots=True)
 class ThemeTokens:
     """
-    Color palette used by the GUI theme system.
+    Immutable GUI theme color palette.
+
+    The token structure centralizes all colors used by
+    the application interface, including backgrounds,
+    typography, buttons, inputs, icons, and tooltip styles.
 
     Attributes
     ----------
@@ -57,6 +62,15 @@ class ThemeTokens:
 
     button_text_disabled : str
         Disabled button text color.
+
+    tooltip_background : str
+        Tooltip background color.
+
+    tooltip_foreground : str
+        Tooltip text color.
+
+    tooltip_border : str
+        Tooltip border color.
     """
 
     background: str
@@ -78,3 +92,7 @@ class ThemeTokens:
     button_pressed: str
     button_text: str
     button_text_disabled: str
+
+    tooltip_background: str
+    tooltip_foreground: str
+    tooltip_border: str

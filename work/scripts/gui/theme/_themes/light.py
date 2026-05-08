@@ -1,5 +1,8 @@
 """
-Light theme color palette.
+Light GUI theme color palette.
+
+This module defines the default light color scheme
+used by the application interface.
 """
 
 
@@ -26,4 +29,8 @@ LIGHT_COLORS = ThemeTokens(
     button_pressed="#CBD5E1",
     button_text="#111827",
     button_text_disabled="#9CA3AF",
+
+    tooltip_background="#CCCCCC",
+    tooltip_foreground="#000000",
+    tooltip_border="#BBBBBB",
 )

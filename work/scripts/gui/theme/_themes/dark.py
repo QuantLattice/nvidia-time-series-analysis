@@ -1,5 +1,8 @@
 """
-Dark theme color palette.
+Dark GUI theme color palette.
+
+This module defines the default dark color scheme
+used by the application interface.
 """
 
 
@@ -26,4 +29,8 @@ DARK_COLORS = ThemeTokens(
     button_pressed="#1F1F1F",
     button_text="#FFFFFF",
     button_text_disabled="#7A7A7A",
+
+    tooltip_background="#2C2C2C",
+    tooltip_foreground="#FFFFFF",
+    tooltip_border="#3C3C3C",
 )
