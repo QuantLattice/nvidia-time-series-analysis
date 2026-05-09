@@ -10,6 +10,3 @@ mysql.cnf
 __pycache__
 
 .coverage
-
-app_config.json
-user_config.json

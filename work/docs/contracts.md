@@ -6,7 +6,6 @@ All stock data MUST follow this structure:
 
 Columns:
 - trade_date (YYYY-MM-DD)
-- source (str)
 - open_price (float)
 - high_price (float)
 - low_price (float)
@@ -25,7 +24,6 @@ Rules:
 All imported CSV files MUST be normalized:
 
 - date → trade_date
-- source → source
 - open → open_price
 - high → high_price
 - low → low_price
@@ -37,7 +35,6 @@ All imported CSV files MUST be normalized:
 
 Columns:
 - id (int, primary key)
-- source (str)
 - trade_date (date)
 - open_price (float)
 - high_price (float)

@@ -18,7 +18,7 @@ All project-related files are contained inside the `work/` directory, as require
 ### 🔧 `config/`
 Contains application configuration files.
 
-- `default_app_config.json` — main configuration file
+- `app_config.json` — main configuration file
 - Stores paths, UI settings, and runtime parameters
 
 ---
@@ -348,31 +348,3 @@ Integration tests ensure that all system layers work correctly together:
 * services
 * validation
 * data processing pipeline
-
-## 🖥️ GUI Documentation
-
-The GUI layer is documented separately to make future maintenance and extension easier.
-
-### Documentation files:
-- `work/docs/gui.md` — high-level GUI architecture and its role in the overall application
-- `work/scripts/gui/README.md` — implementation guide for the `scripts/gui/` package
-
-### What the GUI documentation covers:
-- overall GUI structure
-- startup flow and object initialization
-- layout system
-- themes, styles, and localization
-- reusable widgets and dialogs
-- state management and UI binding
-- rules for adding new views, dialogs, themes, and languages
-
-### Development rule:
-When extending the interface, follow the existing GUI layer structure and keep:
-- presentation logic inside `scripts/gui/`
-- business logic inside `scripts/services/`
-- data access inside `scripts/repositories/`
-- shared contracts inside `scripts/contracts/`
-
-### Recommended entry points for contributors:
-- start with `work/docs/gui.md` for architecture understanding
-- then read `work/scripts/gui/README.md` before modifying the GUI code
