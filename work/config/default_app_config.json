@@ -1,15 +1,21 @@
 {
+  "app": {
+    "title": "NVIDIA Time Series Analysis"
+  },
   "paths": {
     "data_dir": "work/data",
     "output_dir": "work/output",
     "graphics_dir": "work/graphics",
     "logs_dir": "work/logs"
   },
-  "ui": {
-    "language": "ru",
-    "theme": "light",
-    "window_width": 1200,
-    "window_height": 800
+  "assets": {
+    "app_icon": "icons/app.ico",
+    "data_icon": "icons/data.png",
+    "analysis_icon": "icons/analysis.png",
+    "reports_icon": "icons/reports.png",
+    "settings_icon": "icons/settings.png",
+    "display_icon": "icons/display.png",
+    "logo": "images/app_logo.png"
   },
   "reports": {
     "default_export_format": "csv",
