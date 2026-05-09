@@ -1,26 +1,18 @@
-"""
-Application entry point.
+from sqlalchemy import text
 
-This module initializes the configuration manager, creates the GUI
-application instance, and starts the Tkinter event loop.
-"""
-
-
-from work.library.config import ConfigManager
-from work.scripts.gui import App
+from work.scripts.db.session import Database
 
 
 def main() -> None:
-    """
-    Start the application.
+    db = Database()
 
-    The function creates the configuration manager, initializes
-    the GUI application, and launches the main event loop.
-    """
+    with db.session() as session:
+        result = session.execute(text("SELECT 1"))
 
-    config_manager = ConfigManager()
-    app = App(config_manager)
-    app.run()
+        value = result.scalar()
+
+        print("Database connection successful ✔")
+        print(f"Query result: {value}")
 
 
 if __name__ == "__main__":

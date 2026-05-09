@@ -9,7 +9,8 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from contextlib import contextmanager
 
-from work.library.config import ConfigManager, DBConfig
+from work.library.config.config_manager import ConfigManager
+from work.library.config.env_loader import DBConfig
 
 from pathlib import Path
 from urllib.parse import quote_plus
