@@ -1,27 +1,11 @@
-"""
-Application entry point.
-
-This module initializes the configuration manager, creates the GUI
-application instance, and starts the Tkinter event loop.
-"""
-
-
-from work.library.config import ConfigManager
-from work.scripts.gui import App
-
-
-def main() -> None:
-    """
-    Start the application.
-
-    The function creates the configuration manager, initializes
-    the GUI application, and launches the main event loop.
-    """
-
-    config_manager = ConfigManager()
-    app = App(config_manager)
-    app.run()
-
+﻿import sys, os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from library.config.loader import load_config
+from scripts.gui.main_window import MainApp
+import tkinter as tk
 
 if __name__ == "__main__":
-    main()
+    load_config("../config/app_config.json")
+    root = tk.Tk()
+    app = MainApp(root)
+    root.mainloop()

@@ -1,281 +1,128 @@
-"""
-Main application window composition.
-
-This module builds the top-level interface, including the menu bar,
-toolbar, context panel, content area, and layout orchestration.
-"""
-
-
+﻿# -*- coding: utf-8 -*-
 import tkinter as tk
-import os
+from tkinter import ttk, filedialog, messagebox
+import pandas as pd
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+import sys, os
 
-from work.scripts.core import AppState
-from work.library.config import Config
-from work.scripts.gui.services import UISettings, Translator
-from work.scripts.gui.factories import UIFactory
-from work.scripts.gui.constants import (
-    MAIN_WINDOW_SIZE
-)
-from work.scripts.gui.layout import (
-    LayoutManager,
-    LayoutKey,
-    LayoutRow,
-    ToolBar,
-    ContextPanel,
-    MenuBar,
-    ContentArea
-)
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
+from library.config.loader import load_config
 
-class MainWindow:
-    """
-    Main application window controller.
-
-    Parameters
-    ----------
-    root : tk.Tk
-        Root Tkinter application window.
-
-    config : Config
-        Application configuration object.
-
-    app_state : AppState
-        Shared runtime application state.
-
-    ui_factory : UIFactory
-        Factory used to create themed UI components.
-
-    ui_settings : UISettings
-        Runtime UI configuration manager.
-
-    translator : Translator
-        Localization service used for UI text.
-    """
-
-    def __init__(
-        self,
-        root: tk.Tk,
-        config: Config,
-        app_state: AppState,
-        ui_factory: UIFactory,
-        ui_settings: UISettings,
-        translator: Translator
-    ) -> None:
-        """
-        Initialize and build the main application window.
-
-        Parameters
-        ----------
-        root : tk.Tk
-            Root Tkinter application window.
-
-        config : Config
-            Application configuration object.
-
-        app_state : AppState
-            Shared runtime application state.
-
-        ui_factory : UIFactory
-            Factory used to create themed UI components.
-
-        ui_settings : UISettings
-            Runtime UI configuration manager.
-
-        translator : Translator
-            Localization service used for UI text.
-        """
-
+class MainApp:
+    def __init__(self, root):
         self.root = root
-        self.config = config
-        self.app_state = app_state
-        self.ui_factory = ui_factory
-        self.ui_settings = ui_settings
-        self.translator = translator
+        load_config("../config/app_config.json")
+        self.root.title("Financial Analyzer")
+        self.root.geometry("1024x768")
+        self.notebook = ttk.Notebook(root)
+        self.notebook.pack(fill=tk.BOTH, expand=True)
+        self.current_data = None
+        self.create_home()
+        self.create_data()
+        self.create_ref()
+        self.create_analysis()
+        self.create_reports()
+        self.create_config()
+        self.create_help()
+        self.status = tk.StringVar(value="Ready")
+        status_bar = tk.Label(self.root, textvariable=self.status, bd=1, relief=tk.SUNKEN, anchor=tk.W)
+        status_bar.pack(side=tk.BOTTOM, fill=tk.X)
 
-        self._configure_root()
-        self._build_layout()
+    def create_home(self):
+        tab = ttk.Frame(self.notebook)
+        self.notebook.add(tab, text="Home")
+        tk.Label(tab, text="Financial Analysis Platform", font=("Arial", 18)).pack(pady=20)
+        tk.Label(tab, text="Select a tab to start working").pack()
 
-        self.ui_settings.subscribe(callback=self.rebuild)
+    def create_data(self):
+        tab = ttk.Frame(self.notebook)
+        self.notebook.add(tab, text="Data")
+        btn_frame = ttk.Frame(tab)
+        btn_frame.pack(fill=tk.X)
+        ttk.Button(btn_frame, text="Load CSV", command=self.load_csv).pack(side=tk.LEFT)
+        ttk.Button(btn_frame, text="Save CSV", command=self.save_csv).pack(side=tk.LEFT)
+        self.tree = ttk.Treeview(tab)
+        self.tree.pack(fill=tk.BOTH, expand=True)
+        scroll = ttk.Scrollbar(tab, orient=tk.VERTICAL, command=self.tree.yview)
+        self.tree.configure(yscrollcommand=scroll.set)
+        scroll.pack(side=tk.RIGHT, fill=tk.Y)
 
-    # ---------------------------
-    # ROOT
-    # ---------------------------
+    def load_csv(self):
+        path = filedialog.askopenfilename(filetypes=[("CSV files", "*.csv")])
+        if not path: return
+        try:
+            self.current_data = pd.read_csv(path)
+            for row in self.tree.get_children(): self.tree.delete(row)
+            columns = list(self.current_data.columns)
+            self.tree["columns"] = columns
+            self.tree["show"] = "headings"
+            for col in columns: self.tree.heading(col, text=col)
+            for _, row in self.current_data.head(100).iterrows(): self.tree.insert("", tk.END, values=list(row))
+            self.status.set(f"Loaded {os.path.basename(path)}")
+        except Exception as e: messagebox.showerror("Error", f"Failed to load file: {e}")
 
-    def _configure_root(self) -> None:
-        """
-        Configure the main Tkinter root window.
-        """
+    def save_csv(self):
+        if self.current_data is None: messagebox.showerror("Error", "No data to save")
+        path = filedialog.asksaveasfilename(defaultextension=".csv", filetypes=[("CSV files", "*.csv")])
+        if path:
+            try:
+                self.current_data.to_csv(path, index=False)
+                self.status.set(f"Saved {os.path.basename(path)}")
+            except Exception as e: messagebox.showerror("Error", f"Failed to save: {e}")
 
-        self.root.title(self.config.app.app.title)
+    def create_ref(self):
+        tab = ttk.Frame(self.notebook)
+        self.notebook.add(tab, text="References")
+        tk.Label(tab, text="Tickers").pack()
+        self.listbox = tk.Listbox(tab)
+        self.listbox.pack()
+        for t in ["AAPL", "MSFT", "GOOG"]: self.listbox.insert(tk.END, t)
 
-        ui = self.config.user.ui
+    def create_analysis(self):
+        tab = ttk.Frame(self.notebook)
+        self.notebook.add(tab, text="Analysis")
+        ctrl = ttk.Frame(tab)
+        ctrl.pack(fill=tk.X)
+        self.fig = plt.Figure(figsize=(5,4), dpi=100)
+        self.ax = self.fig.add_subplot(111)
+        self.canvas = FigureCanvasTkAgg(self.fig, master=tab)
+        self.canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
 
-        self.root.geometry(
-            newGeometry=(
-                f"{ui.window_width}x{ui.window_height}"
-                f"+{ui.window_x}+{ui.window_y}"
-            )
-        )
+    def create_reports(self):
+        tab = ttk.Frame(self.notebook)
+        self.notebook.add(tab, text="Reports")
+        ttk.Button(tab, text="Generate CSV Report", command=self.make_report).pack()
+        self.report = tk.Text(tab, height=15)
+        self.report.pack(fill=tk.BOTH, expand=True)
 
-        if ui.maximized:
-            self.root.after(0, lambda: self.root.state("zoomed"))
-
-        self.root.minsize(*MAIN_WINDOW_SIZE)
-
-        self._set_icon()
-
-    def _set_icon(self) -> None:
-        """
-        Load and set the application window icon.
-        """
-
-        paths = self.config.app.paths
-        assets = self.config.app.assets
-
-        logo_path = os.path.join(paths.graphics_dir, assets.logo)
-        self._logo_image = tk.PhotoImage(file=logo_path)
-        self.root.iconphoto(True, self._logo_image)
-
-    # ---------------------------
-    # LAYOUT
-    # ---------------------------
-
-    def _build_layout(self) -> None:
-        """
-        Create all top-level GUI components and assemble the layout.
-        """
-
-        self.menu_bar = MenuBar(
-            parent=self.root,
-            config=self.config,
-            ui_factory=self.ui_factory,
-            on_toggle_panels=self.toggle_panels,
-            translator=self.translator,
-            ui_settings=self.ui_settings
-        )
-
-        self.toolbar = ToolBar(
-            parent=self.root,
-            config=self.config,
-            ui_factory=self.ui_factory,
-            on_click=self.on_section_click,
-            translator=self.translator
-        )
-
-        self.context_panel = ContextPanel(
-            parent=self.root,
-            ui_factory=self.ui_factory,
-            app_state=self.app_state
-        )
-
-        self.content_area = ContentArea(
-            parent=self.root
-        )
-        self.content_area.set_placeholder(text="MAIN CONTENT")
-
-        self.layout = LayoutManager(root=self.root)
-        self.layout.register(name=LayoutKey.MENU, widget=self.menu_bar)
-        self.layout.register(name=LayoutKey.TOOLBAR, widget=self.toolbar)
-        self.layout.register(name=LayoutKey.CONTEXT, widget=self.context_panel)
-        self.layout.register(name=LayoutKey.CONTENT, widget=self.content_area)
-
-        self.layout.build(
-            rows=[
-                LayoutRow(name=LayoutKey.MENU),
-                LayoutRow(name=LayoutKey.TOOLBAR),
-                LayoutRow(
-                    name=LayoutKey.CONTEXT,
-                    visible=False
-                ),
-                LayoutRow(
-                    name=LayoutKey.CONTENT,
-                    weight=1,
-                    sticky="nsew",
-                    separator=False
-                ),
-            ]
-        )
-
-    # ---------------------------
-    # LOGIC
-    # ---------------------------
-
-    def on_section_click(
-        self,
-        section: str
-    ) -> None:
-        """
-        Handle toolbar section selection.
-
-        Parameters
-        ----------
-        section : str
-            Selected application section.
-        """
-
-        ui_state = self.app_state.ui_state
-
-        if ui_state.active_section == section:
-            ui_state.active_section = None
-            self.layout.hide(name=LayoutKey.CONTEXT)
-            return
-
-        ui_state.active_section = section
-        self.context_panel.render(section=section)
-
-        self.layout.show(name=LayoutKey.CONTEXT)
-
-    def toggle_panels(self) -> None:
-        """
-        Toggle visibility of toolbar and context panel.
-        """
-
-        ui_state = self.app_state.ui_state
-
-        ui_state.panels_visible = not ui_state.panels_visible
-
-        if ui_state.panels_visible:
-            self.layout.show(name=LayoutKey.TOOLBAR)
-
-            if ui_state.active_section is not None:
-                self.context_panel.render(section=ui_state.active_section)
-                self.layout.show(name=LayoutKey.CONTEXT)
-            else:
-                self.layout.hide(name=LayoutKey.CONTEXT)
+    def make_report(self):
+        if self.current_data is None: self.report.insert(tk.END, "No data loaded. Please load a CSV first.\n")
         else:
-            self.layout.hide(name=LayoutKey.TOOLBAR)
-            self.layout.hide(name=LayoutKey.CONTEXT)
+            os.makedirs("output", exist_ok=True)
+            path = "output/report.csv"
+            try:
+                self.current_data.to_csv(path, index=False)
+                self.report.insert(tk.END, f"Report saved to {path}\n")
+                self.status.set("Report created")
+            except Exception as e: self.report.insert(tk.END, f"Error saving report: {e}\n")
 
-    def rebuild(self):
-        """
-        Rebuild the main window after UI settings changes.
+    def create_config(self):
+        tab = ttk.Frame(self.notebook)
+        self.notebook.add(tab, text="Config")
+        self.config_text = tk.Text(tab, height=20)
+        self.config_text.pack(fill=tk.BOTH, expand=True)
+        try:
+            with open("config/app_config.json", "r", encoding="utf-8") as f: self.config_text.insert(tk.END, f.read())
+        except: pass
 
-        The current widget tree is destroyed and recreated, then the
-        runtime UI state is restored.
-        """
+    def create_help(self):
+        tab = ttk.Frame(self.notebook)
+        self.notebook.add(tab, text="Help")
+        tk.Label(tab, text="Financial Analysis System\nVersion 1.0\nUse tabs for data management, analysis and reporting.", justify=tk.LEFT).pack()
 
-        for widget in self.root.winfo_children():
-            widget.destroy()
-
-        self._build_layout()
-        self._restore_ui_state()
-
-    def _restore_ui_state(self) -> None:
-        """
-        Restore layout visibility after a rebuild.
-        """
-
-        ui_state = self.app_state.ui_state
-
-        if not ui_state.panels_visible:
-            self.layout.hide(name=LayoutKey.TOOLBAR)
-            self.layout.hide(name=LayoutKey.CONTEXT)
-            return
-
-        self.layout.show(name=LayoutKey.TOOLBAR)
-
-        if ui_state.active_section is not None:
-            self.context_panel.render(section=ui_state.active_section)
-            self.layout.show(name=LayoutKey.CONTEXT)
-        else:
-            self.layout.hide(name=LayoutKey.CONTEXT)
+if __name__ == "__main__":
+    root = tk.Tk()
+    app = MainApp(root)
+    root.mainloop()
