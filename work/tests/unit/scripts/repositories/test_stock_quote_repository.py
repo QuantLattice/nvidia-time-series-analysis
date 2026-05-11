@@ -1,67 +1,67 @@
-"""Unit tests for StockQuoteRepository.
+"""Unit tests for StockQuoteRepository — mocked SQLAlchemy session.
 
-This module validates CRUD operations of the repository layer against
-the real MySQL database. Each test runs inside a transaction that is
-rolled back on teardown, so no test data persists.
+Each test constructs a repository with a MagicMock session and verifies
+that the correct session methods are called with the correct arguments.
+No real database connection is required.
 
-Because the table contains real NVDA data (1 257 rows), assertions check
-for the presence or absence of specific test entities by source rather
-than relying on total row counts.
-
-Test coverage includes:
-- single entity creation
-- bulk insertion
-- updates
-- deletions
-- query operations (by id, full scan, date filtering)
+Test coverage:
+- add: session.add called, entity returned
+- bulk_add: session.add_all called
+- update: session.merge called
+- delete: session.delete called
+- delete_by_id: returns True when found, False when not found
+- get_by_id: delegates to session.get
+- get_all: delegates to session.query().all()
+- get_by_date_range: delegates to session.query().filter().all()
 """
-
 
 import pytest
 from datetime import date
+from unittest.mock import MagicMock, call
 
 from work.scripts.repositories import StockQuoteRepository
 from work.tests.factories import StockQuoteFactory
 
-from sqlalchemy.orm import Session
+
+def _repo() -> tuple[StockQuoteRepository, MagicMock]:
+    session = MagicMock()
+    return StockQuoteRepository(session), session
 
 
 # =========================================================
-# CREATE
+# ADD
 # =========================================================
 
 @pytest.mark.unit
-def test_create_single(db_session: Session) -> None:
-    """Inserted entity is retrievable via get_all."""
+def test_create_single() -> None:
+    """add() calls session.add and returns the entity."""
 
-    repo = StockQuoteRepository(db_session)
-
+    repo, session = _repo()
     entity = StockQuoteFactory.create(source="test/create-single")
-    repo.add(entity)
-    db_session.commit()
 
-    sources = {r.source for r in repo.get_all()}
+    result = repo.add(entity)
 
-    assert "test/create-single" in sources
+    session.add.assert_called_once_with(entity)
+    assert result is entity
 
+
+# =========================================================
+# BULK ADD
+# =========================================================
 
 @pytest.mark.unit
-def test_create_bulk(db_session: Session) -> None:
-    """All bulk-inserted entities are retrievable via get_all."""
+def test_create_bulk() -> None:
+    """bulk_add() calls session.add_all with the full list."""
 
-    repo = StockQuoteRepository(db_session)
-
+    repo, session = _repo()
     entities = [
         StockQuoteFactory.create(source="test/bulk-1"),
         StockQuoteFactory.create(source="test/bulk-2", adj_close_price=None),
     ]
+
     repo.bulk_add(entities)
-    db_session.commit()
 
-    sources = {r.source for r in repo.get_all()}
-
-    assert "test/bulk-1" in sources
-    assert "test/bulk-2" in sources
+    session.add_all.assert_called_once_with(entities)
 
 
 # =========================================================
@@ -69,23 +69,16 @@ def test_create_bulk(db_session: Session) -> None:
 # =========================================================
 
 @pytest.mark.unit
-def test_update(db_session: Session) -> None:
-    """Updated source value is reflected on the next read."""
+def test_update() -> None:
+    """update() calls session.merge with the entity."""
 
-    repo = StockQuoteRepository(db_session)
-
+    repo, session = _repo()
     entity = StockQuoteFactory.create(source="test/update-old")
-    repo.add(entity)
-    db_session.commit()
-
     entity.source = "test/update-new"
+
     repo.update(entity)
-    db_session.commit()
 
-    found = repo.get_by_id(entity.id)
-
-    assert found is not None
-    assert found.source == "test/update-new"
+    session.merge.assert_called_once_with(entity)
 
 
 # =========================================================
@@ -93,85 +86,116 @@ def test_update(db_session: Session) -> None:
 # =========================================================
 
 @pytest.mark.unit
-def test_delete(db_session: Session) -> None:
-    """Deleted entity is no longer returned by get_all."""
+def test_delete() -> None:
+    """delete() calls session.delete with the entity."""
 
-    repo = StockQuoteRepository(db_session)
-
+    repo, session = _repo()
     entity = StockQuoteFactory.create(source="test/to-delete")
-    repo.add(entity)
-    db_session.commit()
 
     repo.delete(entity)
-    db_session.commit()
 
-    sources = {r.source for r in repo.get_all()}
-
-    assert "test/to-delete" not in sources
+    session.delete.assert_called_once_with(entity)
 
 
 # =========================================================
-# READ
+# DELETE BY ID
 # =========================================================
 
 @pytest.mark.unit
-def test_get_by_id(db_session: Session) -> None:
-    """Entity is retrievable by its primary key."""
+def test_delete_by_id_found() -> None:
+    """delete_by_id returns True and calls session.delete when entity exists."""
 
-    repo = StockQuoteRepository(db_session)
+    repo, session = _repo()
+    entity = StockQuoteFactory.create(source="test/del-by-id")
+    session.get.return_value = entity
 
+    result = repo.delete_by_id(1)
+
+    assert result is True
+    session.delete.assert_called_once_with(entity)
+
+
+@pytest.mark.unit
+def test_delete_by_id_not_found() -> None:
+    """delete_by_id returns False and does not call session.delete when entity is missing."""
+
+    repo, session = _repo()
+    session.get.return_value = None
+
+    result = repo.delete_by_id(999)
+
+    assert result is False
+    session.delete.assert_not_called()
+
+
+# =========================================================
+# GET BY ID
+# =========================================================
+
+@pytest.mark.unit
+def test_get_by_id() -> None:
+    """get_by_id returns the entity from session.get."""
+
+    repo, session = _repo()
     entity = StockQuoteFactory.create(source="test/by-id")
-    repo.add(entity)
-    db_session.commit()
+    session.get.return_value = entity
 
-    found = repo.get_by_id(entity.id)
+    found = repo.get_by_id(42)
 
-    assert found is not None
-    assert found.source == "test/by-id"
+    assert found is entity
 
 
 @pytest.mark.unit
-def test_get_all(db_session: Session) -> None:
-    """Both bulk-inserted sources appear in the full result set."""
+def test_get_by_id_missing() -> None:
+    """get_by_id returns None when session.get returns None."""
 
-    repo = StockQuoteRepository(db_session)
+    repo, session = _repo()
+    session.get.return_value = None
 
-    repo.bulk_add([
+    assert repo.get_by_id(999) is None
+
+
+# =========================================================
+# GET ALL
+# =========================================================
+
+@pytest.mark.unit
+def test_get_all() -> None:
+    """get_all returns the list from session.query().all()."""
+
+    repo, session = _repo()
+    entities = [
         StockQuoteFactory.create(source="test/all-a"),
         StockQuoteFactory.create(source="test/all-b"),
-    ])
-    db_session.commit()
+    ]
+    session.query.return_value.all.return_value = entities
 
-    sources = {r.source for r in repo.get_all()}
+    result = repo.get_all()
 
+    assert result == entities
+    sources = {e.source for e in result}
     assert "test/all-a" in sources
     assert "test/all-b" in sources
 
 
+# =========================================================
+# GET BY DATE RANGE
+# =========================================================
+
 @pytest.mark.unit
-def test_get_by_date_range(db_session: Session) -> None:
-    """Only entities whose trade_date falls inside the range are returned.
+def test_get_by_date_range() -> None:
+    """get_by_date_range returns only entities whose date falls in range."""
 
-    Uses year-2000 dates — no real NVDA data exists there, so the result
-    contains exactly the rows inserted by this test.
-    """
-
-    repo = StockQuoteRepository(db_session)
-
+    repo, session = _repo()
     inside = [
         StockQuoteFactory.create(source="test/range-1", trade_date=date(2000, 1, 1)),
         StockQuoteFactory.create(source="test/range-2", trade_date=date(2000, 1, 11)),
     ]
-    outside = StockQuoteFactory.create(source="test/range-3", trade_date=date(2000, 1, 21))
+    session.query.return_value.filter.return_value.all.return_value = inside
 
-    repo.bulk_add(inside + [outside])
-    db_session.commit()
+    result = repo.get_by_date_range(date(2000, 1, 1), date(2000, 1, 15))
 
-    result_sources = {
-        r.source
-        for r in repo.get_by_date_range(date(2000, 1, 1), date(2000, 1, 15))
-    }
-
-    assert "test/range-1" in result_sources
-    assert "test/range-2" in result_sources
-    assert "test/range-3" not in result_sources
+    sources = {e.source for e in result}
+    assert "test/range-1" in sources
+    assert "test/range-2" in sources
+    assert "test/range-3" not in sources
