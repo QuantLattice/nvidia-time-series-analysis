@@ -63,28 +63,31 @@ class StockQuoteService:
     # CREATE
     # ============================================================
 
-    def create_quote(self, dto: StockQuoteCreateDTO) -> StockQuoteDTO:
+    def create_quote(self, data: dict) -> dict:
         """Create a new stock quote record.
 
         Parameters
         ----------
-        dto : StockQuoteCreateDTO
-            Input data for a new stock quote.
+        data : dict
+            Raw field values for a new stock quote.
 
         Returns
         -------
-        StockQuoteDTO
+        dict
             Created stock quote with generated identifier.
         """
 
+        if isinstance(data.get("trade_date"), str):
+            data = {**data, "trade_date": date.fromisoformat(data["trade_date"])}
+
+        dto = StockQuoteCreateDTO(**data)
         entity = self._to_entity(dto)
 
         with self.db.session() as session:
             repo = StockQuoteRepository(session)
-            repo.create(entity)
+            saved = repo.add(entity)
             session.flush()
-
-            return self._to_dto(entity)
+            return self._serialize(saved)
 
     def create_quote_bulk(
         self,
@@ -102,7 +105,7 @@ class StockQuoteService:
 
         with self.db.session() as session:
             repo = StockQuoteRepository(session)
-            repo.create_bulk(entities)
+            repo.bulk_add(entities)
 
     # ============================================================
     # UPDATE
@@ -112,7 +115,7 @@ class StockQuoteService:
         self,
         quote_id: int,
         dto: StockQuoteUpdateDTO
-    ) -> Optional[StockQuoteDTO]:
+    ) -> Optional[dict]:
         """Update an existing stock quote by identifier.
 
         Parameters
@@ -124,7 +127,7 @@ class StockQuoteService:
 
         Returns
         -------
-        StockQuoteDTO | None
+        dict | None
             Updated stock quote if found, otherwise None.
 
         Raises
@@ -151,7 +154,7 @@ class StockQuoteService:
 
             repo.update(entity)
 
-            return self._to_dto(entity)
+            return self._serialize(entity)
 
     # ============================================================
     # DELETE
@@ -173,19 +176,13 @@ class StockQuoteService:
 
         with self.db.session() as session:
             repo = StockQuoteRepository(session)
-
-            entity = repo.get_by_id(quote_id)
-            if entity is None:
-                return False
-
-            repo.delete(entity)
-            return True
+            return repo.delete_by_id(quote_id)
 
     # ============================================================
     # READ
     # ============================================================
 
-    def get_quote_by_id(self, quote_id: int) -> Optional[StockQuoteDTO]:
+    def get_quote_by_id(self, quote_id: int) -> Optional[dict]:
         """Retrieve a stock quote by identifier.
 
         Parameters
@@ -195,7 +192,7 @@ class StockQuoteService:
 
         Returns
         -------
-        StockQuoteDTO | None
+        dict | None
             Stock quote data if found, otherwise None.
         """
 
@@ -206,24 +203,21 @@ class StockQuoteService:
             if entity is None:
                 return None
 
-            return self._to_dto(entity)
+            return self._serialize(entity)
 
-    def get_all_quotes(self) -> List[StockQuoteDTO]:
+    def get_all_quotes(self) -> List[dict]:
         """Retrieve all stock quotes.
 
         Returns
         -------
-        list[StockQuoteDTO]
-            All stock quote records as DTOs.
+        list[dict]
+            All stock quote records as plain dictionaries.
         """
 
         with self.db.session() as session:
             repo = StockQuoteRepository(session)
 
-            return [
-                self._to_dto(q)
-                for q in repo.get_all()
-            ]
+            return [self._serialize(q) for q in repo.get_all()]
 
     def get_quotes_by_date_range(
         self,
@@ -329,8 +323,8 @@ class StockQuoteService:
             adj_close_price=dto.adj_close_price,
         )
 
-    def _to_dto(self, entity: StockQuote) -> StockQuoteDTO:
-        """Convert ORM entity into read DTO.
+    def _serialize(self, entity: StockQuote) -> dict:
+        """Convert ORM entity into a plain dictionary.
 
         Parameters
         ----------
@@ -339,25 +333,22 @@ class StockQuoteService:
 
         Returns
         -------
-        StockQuoteDTO
-            DTO suitable for presentation and API response layers.
+        dict
+            Serialized stock quote suitable for presentation and API layers.
         """
 
-        return StockQuoteDTO(
-            id=entity.id,
-            trade_date=entity.trade_date,
-            source=entity.source,
-            open_price=float(entity.open_price),
-            high_price=float(entity.high_price),
-            low_price=float(entity.low_price),
-            close_price=float(entity.close_price),
-
-            adj_close_price=float(entity.adj_close_price)
-            if entity.adj_close_price is not None
-            else None,
-
-            volume=entity.volume,
-        )
+        return {
+            "id":              entity.id,
+            "trade_date":      entity.trade_date,
+            "source":          entity.source,
+            "open_price":      float(entity.open_price),
+            "high_price":      float(entity.high_price),
+            "low_price":       float(entity.low_price),
+            "close_price":     float(entity.close_price),
+            "adj_close_price": float(entity.adj_close_price)
+                               if entity.adj_close_price is not None else None,
+            "volume":          int(entity.volume),
+        }
 
     def _to_dataframe(self, quotes: List[StockQuote]) -> pd.DataFrame:
         """Convert ORM entities to a pandas DataFrame.

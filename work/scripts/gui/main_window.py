@@ -106,7 +106,7 @@ class MainWindow:
         Configure the main Tkinter root window.
         """
 
-        self.root.title(self.config.app.app.title)
+        self.root.title(self.config.app.title)
 
         ui = self.config.user.ui
 

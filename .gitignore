@@ -11,5 +11,8 @@ __pycache__
 
 .coverage
 
+work/graphics/analysis/dark/
+work/graphics/analysis/light/
+
 app_config.json
 user_config.json

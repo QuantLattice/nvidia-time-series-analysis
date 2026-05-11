@@ -61,32 +61,30 @@ class StockQuoteRepository:
     # CREATE
     # ============================================================
 
-    def create(self, quote: StockQuote) -> None:
-        """Add a new stock quote entity to the session.
+    def add(self, quote: StockQuote) -> StockQuote:
+        """Stage a new stock quote entity for insertion.
 
         Parameters
         ----------
         quote : StockQuote
             ORM entity to be persisted.
 
-        Notes
-        -----
-        The entity is staged for insertion. Commit is handled externally.
+        Returns
+        -------
+        StockQuote
+            The same entity (id populated after session flush).
         """
 
         self.session.add(quote)
+        return quote
 
-    def create_bulk(self, quotes: List[StockQuote]) -> None:
-        """Add multiple stock quote entities to the session.
+    def bulk_add(self, quotes: List[StockQuote]) -> None:
+        """Stage multiple stock quote entities for insertion.
 
         Parameters
         ----------
         quotes : list[StockQuote]
             List of ORM entities to be added.
-
-        Notes
-        -----
-        Suitable for batch insert operations.
         """
 
         self.session.add_all(quotes)
@@ -123,6 +121,26 @@ class StockQuoteRepository:
         """
 
         self.session.delete(quote)
+
+    def delete_by_id(self, quote_id: int) -> bool:
+        """Delete a stock quote by primary key.
+
+        Parameters
+        ----------
+        quote_id : int
+            Identifier of the record to delete.
+
+        Returns
+        -------
+        bool
+            True if the record was found and deleted, False otherwise.
+        """
+
+        entity = self.get_by_id(quote_id)
+        if entity is None:
+            return False
+        self.session.delete(entity)
+        return True
 
     # ============================================================
     # READ

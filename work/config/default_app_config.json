@@ -2,6 +2,12 @@
   "app": {
     "title": "NVIDIA Time Series Analysis"
   },
+  "ui": {
+    "language": "en",
+    "theme": "dark",
+    "window_width": 1280,
+    "window_height": 720
+  },
   "paths": {
     "data_dir": "work/data",
     "output_dir": "work/output",

@@ -19,14 +19,11 @@ from work.library.config.user_config_manager import (
     UserConfigManager,
     UserConfig
 )
-from work.library.config.app_config_manager import (
-    AppConfigManager,
+from work.library.config.app_config_loader import (
+    AppConfigLoader,
     AppConfig
 )
-from work.library.config.env_manager import (
-    EnvManager,
-    DBConfig
-)
+from work.library.config.env_loader import EnvLoader, DBConfig
 
 
 @dataclass(slots=True)
@@ -94,9 +91,15 @@ class ConfigManager:
             Path to the environment variable file.
         """
 
-        self.app_config_loader = AppConfigManager(app_config_path)
+        if app_config_path is None:
+            from pathlib import Path
+            app_config_path = (
+                Path(__file__).resolve().parents[3]
+                / "work" / "config" / "default_app_config.json"
+            )
+        self.app_config_loader = AppConfigLoader(app_config_path)
         self.user_config_loader = UserConfigManager(user_config_path)
-        self.env_loader = EnvManager(env_path)
+        self.env_loader = EnvLoader(env_path)
 
     def load(self) -> Config:
         """
@@ -111,7 +114,7 @@ class ConfigManager:
         self.config = Config(
             app=self.app_config_loader.load(),
             user=self.user_config_loader.load(),
-            db=self.env_loader.get_db_config()
+            db=self.env_loader.get_db_config(),
         )
 
         return self.config
