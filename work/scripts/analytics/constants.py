@@ -8,4 +8,5 @@ and technical indicators used throughout the analytics pipeline.
 
 ROLLING_WINDOWS = [5, 10, 20]
 SMA_WINDOWS = [5, 10, 20]
-EMA_WINDOWS = [5, 10]
+EMA_WINDOWS = [5, 10, 20]
+VWMA_WINDOWS = [5, 10, 20]
