@@ -1,26 +1,33 @@
 """
 Standardized feature name registry for analytical pipeline.
 
-This module defines consistent naming conventions for all derived
-features used in time-series analysis, including returns, rolling
-metrics, volatility measures, momentum indicators, and technical
-analysis features.
+This module defines centralized naming conventions for all derived
+features used throughout the analytics system, including:
 
-Using centralized feature names ensures consistency between:
-- feature engineering pipelines;
-- model training datasets;
-- visualization and reporting modules.
+- return-based metrics;
+- categorical analytical labels;
+- moving averages;
+- momentum indicators;
+- volatility measures;
+- technical analysis indicators.
 """
 
 
 class AnalyticsFeatureNames:
     """
-    Central registry of feature names used in analytics.
+    Central registry of analytical feature names.
 
     This class provides:
     - static feature identifiers;
-    - base names for dynamically generated feature families;
-    - helper methods for constructing parameterized feature names.
+    - grouped feature namespaces;
+    - base names for parameterized indicators;
+    - helper methods for generating standardized feature names.
+
+    Notes
+    -----
+    Dynamic analytical features should always be generated using
+    the provided builder methods instead of manually formatting
+    strings inside feature generators.
     """
 
     # ==========================================
@@ -31,6 +38,15 @@ class AnalyticsFeatureNames:
     LOG_RETURN = "log_return"
     CUMULATIVE_RETURN = "cumulative_return"
     ROLLING_RETURN_BASE = "rolling_return"
+
+    # ==========================================
+    # CATEGORICAL FEATURES
+    # ==========================================
+
+    PRICE_TREND = "price_trend"
+    RETURN_SIGN = "return_sign"
+    VOLATILITY_REGIME = "volatility_regime"
+    VOLUME_REGIME = "volume_regime"
 
     # ==========================================
     # MOVING AVERAGES
