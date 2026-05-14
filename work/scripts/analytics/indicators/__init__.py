@@ -1,8 +1,10 @@
 """
 Analytical indicator functions.
 
-This package exposes reusable helpers for return calculations,
-moving averages, and time-series analysis.
+This package exposes reusable building blocks for:
+- return-based features;
+- moving averages;
+- technical indicators (momentum, volatility, oscillators).
 """
 
 
@@ -17,6 +19,14 @@ from .moving_averages import (
     ema,
     vwma
 )
+from .technical_indicators import (
+    RSIMethod,
+    rsi,
+    macd,
+    bollinger_bands,
+    volatility,
+    momentum
+)
 
 
 __all__ = [
@@ -26,5 +36,11 @@ __all__ = [
     "cumulative_return",
     "sma",
     "ema",
-    "vwma"
+    "vwma",
+    "RSIMethod",
+    "rsi",
+    "macd",
+    "bollinger_bands",
+    "volatility",
+    "momentum"
 ]
