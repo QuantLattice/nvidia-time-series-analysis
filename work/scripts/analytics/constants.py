@@ -1,15 +1,16 @@
 """
 Default analytical configuration constants.
 
-This module defines standardized default parameters used across
-the analytics and feature engineering pipeline.
+This module defines standardized default parameters used across the
+analytics and feature engineering pipeline.
 
 The constants centralize commonly used hyperparameters for:
 - return calculations;
 - moving averages;
 - momentum and volatility indicators;
 - technical analysis indicators;
-- categorical feature generation.
+- categorical feature generation;
+- exploratory data analysis helpers.
 
 Using shared defaults ensures:
 - consistency across analytical modules;
@@ -68,3 +69,46 @@ RETURN_STRONG_THRESHOLD = 0.02
 # Quantile boundaries used for regime classification.
 CATEGORY_LOW_QUANTILE = 0.33
 CATEGORY_HIGH_QUANTILE = 0.66
+
+# ==========================================
+# STATISCTICS
+# ==========================================
+
+# Default label used when a categorical value is unavailable.
+DEFAULT_UNKNOWN_CATEGORY_NAME = "unknown"
+
+# ==========================================
+# ANALYSIS
+# ==========================================
+
+# Default trimming ratio used for robust statistics.
+DEFAULT_TRIM_RATIO = 0.05
+
+# Default number of histogram bins for distribution summaries.
+DEFAULT_HISTOGRAM_BINS = 10
+
+# Default Tukey IQR multiplier for outlier detection.
+DEFAULT_OUTLIER_IQR_MULTIPLIER = 1.5
+
+# Default correlation method used in pairwise analysis.
+DEFAULT_CORRELATION_METHOD = "pearson"
+
+# Default threshold for strong correlations.
+DEFAULT_STRONG_CORRELATION_THRESHOLD = 0.7
+
+# Default number of top correlations to return.
+DEFAULT_TOP_CORRELATIONS_COUNT = 5
+
+# Default fallback name for unnamed pandas Series.
+DEFAULT_SERIES_NAME = "unnamed_series"
+
+# Default quantile probabilities for descriptive distribution tables.
+DEFAULT_QUANTILE_PROBS = [
+    0.01,
+    0.05,
+    0.25,
+    0.50,
+    0.75,
+    0.95,
+    0.99,
+]
