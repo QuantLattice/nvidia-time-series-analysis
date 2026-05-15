@@ -1,24 +1,21 @@
-"""Contracts package for standardized data structures.
+"""
+Contracts package for standardized analytical data structures.
 
-This package provides a unified interface for data schemas and DataFrame
-wrappers used across the application.
+This package defines unified interfaces for working with financial
+time-series data used throughout the application.
 
-Components
-----------
-StockQuoteSchema
-    Defines standardized column names for stock market datasets.
-
-StockQuoteFrame
-    Provides a typed wrapper around pandas DataFrame for safer and more
-    expressive data access.
+It provides:
+- typed DataFrame wrappers;
+- standardized feature naming conventions for analytics;
+- shared schema definitions for stock market datasets.
 """
 
 
-from .stock_quote_schema import StockQuoteSchema
 from .stock_quote_frame import StockQuoteFrame
+from .analytics_feature_names import AnalyticsFeatureNames
 
 
 __all__ = [
-    "StockQuoteSchema",
     "StockQuoteFrame",
+    "AnalyticsFeatureNames"
 ]
