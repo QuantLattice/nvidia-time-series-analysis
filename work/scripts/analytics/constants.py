@@ -5,18 +5,24 @@ This module defines standardized default parameters used across the
 analytics and feature engineering pipeline.
 
 The constants centralize commonly used hyperparameters for:
-- return calculations;
-- moving averages;
+
+- return-based feature computation;
+- moving average and smoothing techniques;
 - momentum and volatility indicators;
 - technical analysis indicators;
-- categorical feature generation;
-- exploratory data analysis helpers.
+- categorical feature engineering;
+- exploratory data analysis (EDA);
+- time-series stationarity testing.
 
-Using shared defaults ensures:
+Design goals
+------------
+Centralized configuration ensures:
+
 - consistency across analytical modules;
-- reproducible feature generation;
-- easier configuration management;
-- simplified experimentation and tuning.
+- reproducible feature generation and statistical results;
+- simplified experimentation and parameter tuning;
+- clear separation between logic and configuration;
+- easier maintenance of analytical defaults.
 """
 
 
@@ -56,6 +62,7 @@ BOLLINGER_NUM_STD = 2.0
 VOLATILITY_WINDOW = 20
 MOMENTUM_WINDOW = 20
 
+
 # ==========================================
 # CATEGORICAL FEATURES
 # ==========================================
@@ -70,12 +77,14 @@ RETURN_STRONG_THRESHOLD = 0.02
 CATEGORY_LOW_QUANTILE = 0.33
 CATEGORY_HIGH_QUANTILE = 0.66
 
+
 # ==========================================
 # STATISCTICS
 # ==========================================
 
 # Default label used when a categorical value is unavailable.
 DEFAULT_UNKNOWN_CATEGORY_NAME = "unknown"
+
 
 # ==========================================
 # ANALYSIS
@@ -112,3 +121,39 @@ DEFAULT_QUANTILE_PROBS = [
     0.95,
     0.99,
 ]
+
+
+# =============================================================================
+# TIME SERIES: STATIONARITY TESTING (ADF)
+# =============================================================================
+
+# Significance level for Augmented Dickey-Fuller test.
+ADF_DEFAULT_ALPHA = 0.05
+
+# Deterministic term used in ADF regression ("c" = constant).
+ADF_DEFAULT_REGRESSION = "c"
+
+# Lag selection method used by ADF test.
+ADF_DEFAULT_AUTOLAG = "AIC"
+
+# Maximum lag order (None = automatic selection).
+ADF_DEFAULT_MAXLAG = None
+
+# Minimum number of observations required for ADF test validity.
+ADF_DEFAULT_MIN_LENGTH = 8
+
+
+# =============================================================================
+# ADF INTERPRETATION MESSAGES
+# =============================================================================
+
+ADF_HYPOTHESIS_STATIONARY = "Series is stationary."
+ADF_HYPOTHESIS_NON_STATIONARY = "Series is non-stationary."
+
+ADF_RECOMMENDATION_STATIONARY = (
+    "The series is suitable for many classical time-series models."
+)
+
+ADF_RECOMMENDATION_NON_STATIONARY = (
+    "Differencing or detrending may be required before forecasting."
+)
