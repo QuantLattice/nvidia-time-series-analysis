@@ -97,6 +97,19 @@ class DataFrameStationarityReport:
 
 
 class StationarityAnalysis:
+    """
+    High-level stationarity analysis based on the Augmented Dickey-Fuller test.
+
+    This class wraps the low-level ADF test into a structured analysis layer
+    that produces human-readable and system-consumable reports.
+
+    It extends raw statistical output with:
+    - hypothesis interpretation;
+    - decision labeling (stationary / non-stationary);
+    - recommendation generation for downstream processing;
+    - batch processing over DataFrames.
+    """
+
     @overload
     def analyze(
         self,

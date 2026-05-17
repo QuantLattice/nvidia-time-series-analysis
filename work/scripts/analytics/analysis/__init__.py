@@ -5,12 +5,14 @@ and time-series diagnostics.
 This package aggregates low-level statistical functions into
 structured, report-oriented analysis components.
 
-It is designed to provide ready-to-consume analytical outputs
-for:
+The analysis layer is intended to provide ready-to-consume
+results for:
+
 - reporting systems;
 - visualization layers;
 - machine learning feature inspection;
-- time-series diagnostics.
+- time-series diagnostics;
+- batch processing of tabular datasets.
 
 Included analysis groups
 ------------------------
@@ -31,7 +33,11 @@ Categorical analysis
     Frequency distributions, entropy, dominance, and imbalance metrics.
 
 Stationarity analysis
-    Time-series stationarity testing (ADF test) for structural stability.
+    Augmented Dickey-Fuller testing for time-series stationarity.
+
+Autocorrelation analysis
+    Autocorrelation and partial autocorrelation diagnostics for
+    lag structure and temporal dependence.
 """
 
 
@@ -60,6 +66,11 @@ from .stationarity_analysis import (
     StationarityReport,
     DataFrameStationarityReport
 )
+from .autocorrelation_analysis import (
+    AutocorrelationAnalysis,
+    AutocorrelationReport,
+    DataFrameAutocorrelationReport
+)
 
 
 __all__ = [
@@ -80,5 +91,9 @@ __all__ = [
 
     "StationarityAnalysis",
     "StationarityReport",
-    "DataFrameStationarityReport"
+    "DataFrameStationarityReport",
+
+    "AutocorrelationAnalysis",
+    "AutocorrelationReport",
+    "DataFrameAutocorrelationReport"
 ]

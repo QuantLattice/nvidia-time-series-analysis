@@ -22,7 +22,6 @@ The null hypothesis (H0) of the ADF test is that the series has a unit root
 from dataclasses import dataclass
 from typing import Mapping, Optional, Any, Tuple, cast
 import pandas as pd
-import numpy as np
 from statsmodels.tsa.stattools import adfuller  # type: ignore
 
 from work.scripts.analytics.constants import (
@@ -32,6 +31,7 @@ from work.scripts.analytics.constants import (
     ADF_DEFAULT_MIN_LENGTH,
     ADF_DEFAULT_REGRESSION,
 )
+from work.scripts.analytics.utils import prepare_series_for_statistical_testing
 
 
 @dataclass(frozen=True)
@@ -134,7 +134,7 @@ def adf_test(
     """
 
     config = config or ADFTestConfig()
-    cleaned = _prepare_series(series)
+    cleaned = prepare_series_for_statistical_testing(series)
 
     if len(cleaned) < config.min_length:
         raise ValueError(
@@ -193,26 +193,3 @@ def adf_test(
         alpha=config.alpha,
         is_stationary=is_stationary_result,
     )
-
-
-def _prepare_series(series: pd.Series) -> pd.Series:
-    """
-    Clean and prepare time series for statistical testing.
-
-    - Converts to numeric
-    - Removes NaN and infinite values
-    - Ensures non-empty valid series
-    """
-
-    cleaned = (
-        pd.to_numeric(series, errors="coerce")
-        .replace([np.inf, -np.inf], np.nan)
-        .dropna()
-    )
-
-    if cleaned.empty:
-        raise ValueError(
-            "ADF test requires at least one valid numeric observation."
-        )
-
-    return cleaned.astype(float)

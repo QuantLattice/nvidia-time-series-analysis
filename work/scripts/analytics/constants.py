@@ -1,29 +1,60 @@
 """
 Default analytical configuration constants.
 
-This module defines standardized default parameters used across the
-analytics and feature engineering pipeline.
+This module centralizes shared default parameters, thresholds,
+and type definitions used throughout the analytics pipeline.
 
-The constants centralize commonly used hyperparameters for:
-
-- return-based feature computation;
-- moving average and smoothing techniques;
-- momentum and volatility indicators;
-- technical analysis indicators;
-- categorical feature engineering;
+The constants defined here provide a unified configuration layer for:
+- feature engineering;
 - exploratory data analysis (EDA);
-- time-series stationarity testing.
+- statistical analysis;
+- technical indicators;
+- categorical feature generation;
+- time-series diagnostics.
+
+Covered analytical domains
+--------------------------
+
+Return features
+    Rolling return window definitions used in return-based analysis.
+
+Moving averages
+    Default windows for SMA, EMA, and VWMA indicators.
+
+Technical indicators
+    Hyperparameters for RSI, MACD, Bollinger Bands,
+    volatility, and momentum calculations.
+
+Categorical features
+    Thresholds and quantile boundaries used for
+    categorical regime classification.
+
+EDA utilities
+    Shared defaults for descriptive statistics,
+    histogram generation, outlier detection,
+    and correlation analysis.
+
+Stationarity testing
+    Configuration defaults for Augmented Dickey-Fuller (ADF)
+    stationarity diagnostics.
+
+Autocorrelation analysis
+    Shared defaults for autocorrelation (ACF) and
+    partial autocorrelation (PACF) analysis.
 
 Design goals
 ------------
-Centralized configuration ensures:
+Centralized configuration provides:
 
 - consistency across analytical modules;
-- reproducible feature generation and statistical results;
-- simplified experimentation and parameter tuning;
-- clear separation between logic and configuration;
-- easier maintenance of analytical defaults.
+- reproducible statistical behavior;
+- simplified experimentation and tuning;
+- separation of configuration from implementation logic;
+- easier long-term maintenance and extensibility.
 """
+
+
+from typing import Literal, TypeAlias
 
 
 # ==========================================
@@ -87,7 +118,7 @@ DEFAULT_UNKNOWN_CATEGORY_NAME = "unknown"
 
 
 # ==========================================
-# ANALYSIS
+# EXPLORATORY DATA ANALYSIS (EDA)
 # ==========================================
 
 # Default trimming ratio used for robust statistics.
@@ -157,3 +188,49 @@ ADF_RECOMMENDATION_STATIONARY = (
 ADF_RECOMMENDATION_NON_STATIONARY = (
     "Differencing or detrending may be required before forecasting."
 )
+
+# =============================================================================
+# TIME SERIES: AUTOCORRELATION ANALYSIS
+# =============================================================================
+
+# Default maximum lag used for ACF/PACF analysis.
+AUTOCORRELATION_DEFAULT_MAX_LAG = 40
+
+# Default significance level for autocorrelation confidence intervals.
+AUTOCORRELATION_DEFAULT_ALPHA = 0.05
+
+# Default FFT flag for ACF computation.
+AUTOCORRELATION_DEFAULT_FFT = True
+
+# Default minimum series length required for autocorrelation analysis.
+AUTOCORRELATION_DEFAULT_MIN_LENGTH = 8
+
+# Default lag index name used in returned series/dataframes.
+AUTOCORRELATION_LAG_INDEX_NAME = "lag"
+
+# Default names for returned summary series.
+AUTOCORRELATION_ACF_SERIES_NAME = "acf"
+AUTOCORRELATION_PACF_SERIES_NAME = "pacf"
+
+# Default confidence interval column names.
+AUTOCORRELATION_CI_LOWER_COLUMN = "lower"
+AUTOCORRELATION_CI_UPPER_COLUMN = "upper"
+
+# Supported PACF methods.
+PACFMethod: TypeAlias = Literal[
+    "yw",
+    "ywadjusted",
+    "ols",
+    "ols-inefficient",
+    "ols-adjusted",
+    "ywm",
+    "ywmle",
+    "ld",
+    "ldadjusted",
+    "ldb",
+    "ldbiased",
+    "burg",
+]
+
+# Default PACF method.
+AUTOCORRELATION_DEFAULT_PACF_METHOD: PACFMethod = "ywadjusted"
