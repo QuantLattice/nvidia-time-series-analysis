@@ -10,7 +10,7 @@ order to cover positive and negative test scenarios.
 
 import pandas as pd
 
-from work.scripts.contracts import StockQuoteSchema as S
+from work.scripts.contracts.schemas import StockQuoteSchema as S
 
 
 class DataFrameFactory:

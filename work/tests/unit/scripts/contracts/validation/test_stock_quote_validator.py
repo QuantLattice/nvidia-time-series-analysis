@@ -4,6 +4,7 @@ This module verifies schema, type, nullability, and business-rule checks
 performed by the StockQuoteValidator.
 
 Test coverage includes:
+- reject emty dataset
 - required column presence
 - datetime, string, numeric, and integer type validation
 - null value detection
@@ -14,9 +15,23 @@ Test coverage includes:
 
 import pytest
 
-from work.scripts.contracts import StockQuoteSchema as S
+from work.scripts.contracts.schemas import StockQuoteSchema as S
 from work.scripts.contracts.validation import StockQuoteValidator
 from work.tests.factories import DataFrameFactory
+
+
+# =========================================================
+# EMPTY DATAFRAME VALIDATION
+# =========================================================
+
+@pytest.mark.unit
+def test_empty_dataframe() -> None:
+    """Reject an empty dataset."""
+
+    df = DataFrameFactory.valid(rows=0)
+
+    with pytest.raises(ValueError, match="Dataframe is emty"):
+        StockQuoteValidator.validate(df)
 
 
 # =========================================================

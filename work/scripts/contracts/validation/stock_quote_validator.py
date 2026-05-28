@@ -1,22 +1,32 @@
-"""Validation utilities for StockQuote DataFrames.
+"""Validation utilities for stock quote DataFrames.
 
-This module checks whether a stock quote dataset satisfies structural,
-type-related, and business-rule constraints before it is stored in the
-database or used in analytics.
+This module provides validation logic for normalized stock market datasets.
+It verifies that a DataFrame satisfies structural, type-related, and
+business-rule constraints before being used in analytics or persisted
+to storage.
 """
 
 
 import pandas as pd
 
-from work.scripts.contracts import StockQuoteSchema as S
+from work.scripts.contracts.schemas import StockQuoteSchema as S
 
 
 class StockQuoteValidator:
-    """Validate stock quote tabular data.
+    """Validate normalized stock quote data.
 
-    The validator checks the presence of required columns, column data types,
-    null values, and domain-specific financial rules such as OHLC consistency
-    and non-negative trading volume.
+    The validator checks:
+    - dataset emptiness;
+    - required schema columns;
+    - column data types;
+    - missing values;
+    - financial business rules;
+    - trading volume consistency.
+
+    Notes
+    -----
+    This validator is intended to run after StockQuoteMapper and
+    StockQuoteNormalizer have processed the raw dataset.
     """
 
     @classmethod
@@ -26,15 +36,16 @@ class StockQuoteValidator:
         Parameters
         ----------
         df : pd.DataFrame
-            DataFrame containing stock quote data.
+            Normalized DataFrame containing stock quote data.
 
         Raises
         ------
         ValueError
-            If the DataFrame violates schema, type, nullability, or business
-            rule constraints.
+            If the DataFrame violates schema, type, nullability,
+            emptiness, or business-rule constraints.
         """
 
+        cls._is_emty(df)
         cls._validate_columns(df)
         cls._validate_types(df)
         cls._validate_nulls(df)
@@ -42,8 +53,28 @@ class StockQuoteValidator:
         cls._validate_volume(df)
 
     @staticmethod
+    def _is_emty(df: pd.DataFrame) -> None:
+        """Check that the DataFrame is not empty.
+
+        Parameters
+        ----------
+        df : pd.DataFrame
+            DataFrame to validate.
+
+        Raises
+        ------
+        ValueError
+            If the DataFrame contains no rows.
+        """
+
+        if df.empty:
+            raise ValueError(
+                "Dataframe is emty."
+            )
+
+    @staticmethod
     def _validate_columns(df: pd.DataFrame) -> None:
-        """Check that all expected columns are present.
+        """Check that all expected schema columns are present.
 
         Parameters
         ----------
@@ -62,7 +93,7 @@ class StockQuoteValidator:
 
     @staticmethod
     def _validate_types(df: pd.DataFrame) -> None:
-        """Check that columns have expected data types.
+        """Check that columns use expected data types.
 
         Parameters
         ----------
@@ -72,10 +103,11 @@ class StockQuoteValidator:
         Raises
         ------
         ValueError
-            If trade date is not datetime,
-            or numeric columns are not numeric,
-            or integer columns are not integer typed,
-            or string columns are not string.
+            If:
+            - trade_date is not datetime;
+            - numeric columns are not numeric;
+            - integer columns are not integer typed;
+            - string columns are not string typed.
         """
 
         if not pd.api.types.is_datetime64_any_dtype(df[S.TRADE_DATE]):
@@ -120,7 +152,7 @@ class StockQuoteValidator:
 
     @staticmethod
     def _validate_business_rules(df: pd.DataFrame) -> None:
-        """Validate financial business rules.
+        """Validate financial business constraints.
 
         Parameters
         ----------
@@ -130,7 +162,7 @@ class StockQuoteValidator:
         Raises
         ------
         ValueError
-            If high price is lower than low price in any row.
+            If high price is lower than low price in any record.
         """
 
         if (df[S.HIGH_PRICE] < df[S.LOW_PRICE]).any():
@@ -138,7 +170,7 @@ class StockQuoteValidator:
 
     @staticmethod
     def _validate_volume(df: pd.DataFrame) -> None:
-        """Check that trading volume is non-negative.
+        """Check that trading volume values are non-negative.
 
         Parameters
         ----------
@@ -148,7 +180,7 @@ class StockQuoteValidator:
         Raises
         ------
         ValueError
-            If negative volume values are detected.
+            If negative trading volume values are detected.
         """
 
         if (df[S.VOLUME] < 0).any():

@@ -20,8 +20,15 @@ import pandas as pd
 import pytest
 
 from work.tests.helpers import run_pipeline
-from work.scripts.contracts import StockQuoteSchema as S
+from work.scripts.contracts.schemas import StockQuoteSchema as S
+from work.scripts.contracts.mappers import StockQuoteMapper
 from work.tests.factories import DataFrameFactory
+
+
+def _mapped(df: pd.DataFrame) -> pd.DataFrame:
+    """Map raw dataframe columns to internal schema names."""
+
+    return StockQuoteMapper.map(df)
 
 
 # =========================================================
@@ -32,7 +39,7 @@ from work.tests.factories import DataFrameFactory
 def test_pipeline_valid_raw_data():
     """Process a valid raw dataset and verify the cleaned output."""
 
-    df = DataFrameFactory.raw_unsorted()
+    df = _mapped(DataFrameFactory.raw_unsorted())
 
     result = run_pipeline(df)
 
@@ -154,7 +161,7 @@ def test_pipeline_negative_volume():
 def test_pipeline_real_world_dirty_csv():
     """Process a messy CSV-like dataset and verify ordering after cleanup."""
 
-    df = DataFrameFactory.raw_unsorted()
+    df = _mapped(DataFrameFactory.raw_unsorted())
 
     result = run_pipeline(df)
 
