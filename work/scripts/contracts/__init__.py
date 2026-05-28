@@ -1,21 +1,24 @@
 """
-Contracts package for standardized analytical data structures.
+Core contracts package for analytics and forecasting systems.
 
-This package defines unified interfaces for working with financial
-time-series data used throughout the application.
+This module defines shared data structures, naming conventions,
+and schema contracts used across the entire analytical pipeline.
 
-It provides:
-- typed DataFrame wrappers;
-- standardized feature naming conventions for analytics;
-- shared schema definitions for stock market datasets.
+It ensures:
+- consistent feature naming;
+- unified dataset representations;
+- type-safe model identification;
+- interoperability between analytics and forecasting modules.
 """
 
 
 from .stock_quote_frame import StockQuoteFrame
 from .analytics_feature_names import AnalyticsFeatureNames
+from .forecasting_model_names import ForecastModelName
 
 
 __all__ = [
     "StockQuoteFrame",
-    "AnalyticsFeatureNames"
+    "AnalyticsFeatureNames",
+    "ForecastModelName"
 ]
