@@ -6,7 +6,7 @@ and more readable access to stock price data columns.
 
 
 import pandas as pd
-from .stock_quote_schema import StockQuoteSchema as S
+from .schemas.stock_quote_schema import StockQuoteSchema as S
 
 
 class StockQuoteFrame:

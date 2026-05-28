@@ -17,9 +17,16 @@ The tests focus on the cleaned output produced by the normalizer.
 import pandas as pd
 import pytest
 
-from work.scripts.contracts import StockQuoteSchema as S
+from work.scripts.contracts.schemas import StockQuoteSchema as S
 from work.scripts.contracts.validation import StockQuoteNormalizer
 from work.tests.factories import DataFrameFactory
+from work.scripts.contracts.mappers import StockQuoteMapper
+
+
+def _mapped(df: pd.DataFrame) -> pd.DataFrame:
+    """Map raw dataframe columns to internal schema names."""
+
+    return StockQuoteMapper.map(df)
 
 
 # =========================================================
@@ -31,7 +38,7 @@ def test_normalization_basic() -> None:
     """Normalize a dirty dataset and verify resulting column types."""
 
     df = StockQuoteNormalizer.normalize(
-        DataFrameFactory.raw_unsorted()
+        _mapped(DataFrameFactory.raw_unsorted())
     )
 
     assert pd.api.types.is_datetime64_any_dtype(df[S.TRADE_DATE])
@@ -57,7 +64,7 @@ def test_sorting_by_date() -> None:
     """Normalize a dirty dataset and verify chronological ordering."""
 
     df = StockQuoteNormalizer.normalize(
-        DataFrameFactory.raw_unsorted()
+        _mapped(DataFrameFactory.raw_unsorted())
     )
 
     assert df[S.TRADE_DATE].is_monotonic_increasing
@@ -153,7 +160,7 @@ def test_column_stripping() -> None:
     """Normalize a dirty dataset and verify header whitespace removal."""
 
     df = StockQuoteNormalizer.normalize(
-        DataFrameFactory.raw_unsorted()
+        _mapped(DataFrameFactory.raw_unsorted())
     )
 
     assert S.TRADE_DATE in df.columns

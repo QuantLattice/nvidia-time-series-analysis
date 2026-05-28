@@ -19,7 +19,7 @@ from work.scripts.repositories.stock_quote_repository import (
     StockQuoteRepository
 )
 from work.scripts.db.models import StockQuote
-from work.scripts.contracts import StockQuoteSchema as S
+from work.scripts.contracts.schemas import StockQuoteSchema as S
 from work.scripts.dto import (
     StockQuoteCreateDTO,
     StockQuoteUpdateDTO,
