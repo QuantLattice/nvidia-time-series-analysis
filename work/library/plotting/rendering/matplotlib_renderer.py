@@ -4,24 +4,30 @@ Matplotlib rendering backend for the plotting subsystem.
 This module implements the renderer contract using Matplotlib as the
 underlying visualization engine.
 
-The implementation supports:
-- primary and overlay layer rendering;
-- chart title and axis configuration;
-- grid and legend control;
-- figure layout management.
+The renderer operates on an existing ``PlotContext`` and is responsible
+for drawing plot layers and applying chart-level configuration.
 
-The backend is intended for reusable layered chart composition.
+Features
+--------
+- primary and overlay layer rendering;
+- chart title and axis label configuration;
+- grid management;
+- legend aggregation across multiple axes.
+
+Notes
+-----
+Figure creation and lifecycle management are handled by the plotting
+session. This renderer only performs drawing operations on an existing
+plot context.
 """
 
 
-from matplotlib.figure import Figure
-from typing import List
-import matplotlib.pyplot as plt
+from typing import Iterable
 from matplotlib.axes import Axes
 
 from work.library.plotting.contracts import (
     ChartConfig,
-    FigureConfig,
+    PlotContext,
     PlotLayer
 )
 from work.library.plotting.rendering import (
@@ -32,59 +38,64 @@ from work.library.plotting.stack import LayerStack
 
 class MatplotlibRenderer(Renderer):
     """
-    Matplotlib-based implementation of the plotting renderer contract.
+    Matplotlib implementation of the rendering contract.
 
-    This renderer composes a layered chart on top of a Matplotlib figure
-    and supports a dual-axis layout for primary and overlay layers.
+    The renderer draws plot layers into an existing plotting context
+    using Matplotlib axes.
 
     The rendering workflow includes:
-    - figure creation;
+
     - primary layer rendering;
     - overlay layer rendering;
     - chart configuration application;
-    - legend assembly;
-    - optional tight layout adjustment.
+    - legend aggregation;
+    - final chart composition.
+
+    Notes
+    -----
+    The renderer assumes that figure creation and axis initialization
+    have already been performed by the active plotting session.
     """
+
+    # ==========================================
+    # RENDERING PIPELINE
+    # ==========================================
 
     def render(
         self,
         stack: LayerStack,
-        figure_config: FigureConfig,
+        context: PlotContext,
         chart_config: ChartConfig,
-    ) -> Figure:
+    ) -> None:
         """
         Render a plot stack using Matplotlib.
 
         Parameters
         ----------
         stack : LayerStack
-            Plot layer stack containing primary and overlay layers.
+            Collection of plot layers to render.
 
-        figure_config : FigureConfig
-            Figure configuration controlling size, DPI, and layout behavior.
+        context : PlotContext
+            Active plotting context containing the figure and target axes.
 
         chart_config : ChartConfig
-            Chart configuration controlling title, labels, grid, and legend.
+            Chart-level configuration controlling labels, title,
+            grid visibility, and legend behavior.
 
         Returns
         -------
-        Figure
-            Rendered Matplotlib figure.
+        None
+            Rendering is performed by side effect on the provided
+            plotting context.
 
         Notes
         -----
-        Primary layers are rendered on the main axes, while overlay layers
-        are rendered on a secondary twin y-axis.
+        Primary layers are rendered on the primary axes, while overlay
+        layers are rendered on the secondary overlay axes.
         """
 
-        # FIGURE SETUP
-        subplots = plt.subplots(  # type: ignore
-            figsize=figure_config.figsize,
-            dpi=figure_config.dpi
-        )
-        fig, ax = subplots
-
-        overlay_ax = ax.twinx()
+        ax = context.primary_axes
+        overlay_ax = context.overlay_axes
 
         # LAYER RENDERING
         self._render_layers(
@@ -92,9 +103,9 @@ class MatplotlibRenderer(Renderer):
             axes=ax
         )
         self._render_layers(
-            layers=stack.overlay_layers(),
-            axes=overlay_ax
-        )
+                layers=stack.overlay_layers(),
+                axes=overlay_ax
+            )
 
         # CHART CONFIGURATION
         self._apply_chart_config(
@@ -109,15 +120,13 @@ class MatplotlibRenderer(Renderer):
             chart_config=chart_config
         )
 
-        # LAYOUT FINALIZATION
-        if figure_config.tight_layout:
-            fig.tight_layout()
-
-        return fig
+    # ==========================================
+    # INTERNAL HELPERS
+    # ==========================================
 
     def _render_layers(
         self,
-        layers: List[PlotLayer],
+        layers: Iterable[PlotLayer],
         axes: Axes
     ) -> None:
         """
@@ -125,8 +134,8 @@ class MatplotlibRenderer(Renderer):
 
         Parameters
         ----------
-        layers : List[PlotLayer]
-            Plot layers to render.
+        layers : Iterable[PlotLayer]
+            Collection of plot layers to render.
 
         axes : Axes
             Target Matplotlib axes.
@@ -154,7 +163,8 @@ class MatplotlibRenderer(Renderer):
             Target Matplotlib axes.
 
         chart_config : ChartConfig
-            Chart configuration containing title, labels, and display flags.
+            Chart metadata and display options to apply to the
+            primary axes.
 
         Returns
         -------
@@ -194,21 +204,25 @@ class MatplotlibRenderer(Renderer):
         chart_config : ChartConfig
             Chart configuration controlling legend visibility.
 
-        Returns
-        -------
-        None
-            Legend is applied by side effect when enabled and available.
+        Notes
+        -----
+        Legend entries from both primary and overlay axes are merged
+        into a single legend attached to the primary axes.
         """
 
         if not chart_config.show_legend:
             return
 
         handles, labels = axes.get_legend_handles_labels()
-        overlay_handles, overlay_labels = \
-            overlay_axes.get_legend_handles_labels()
+        all_handles = list(handles)
+        all_labels = list(labels)
 
-        all_handles = handles + overlay_handles
-        all_labels = labels + overlay_labels
+        overlay_handles, overlay_labels = (
+            overlay_axes.get_legend_handles_labels()
+        )
+
+        all_handles.extend(overlay_handles)
+        all_labels.extend(overlay_labels)
 
         if all_handles:
             axes.legend(  # type: ignore

@@ -2,7 +2,7 @@
 Plotting session orchestration.
 
 This module defines the session object used to collect plot layers,
-store chart metadata, and trigger rendering through a configured
+manage chart metadata, and trigger rendering through a configured
 renderer backend.
 
 The session provides a fluent interface for:
@@ -10,11 +10,17 @@ The session provides a fluent interface for:
 - setting chart labels;
 - resetting session state;
 - rendering the final figure.
+
+Notes
+-----
+This implementation assumes a context-based rendering flow using
+``PlotContext`` objects.
 """
 
 
 from typing import Optional, Self, Iterable
 from matplotlib.figure import Figure
+import matplotlib.pyplot as plt
 
 from work.library.plotting import (
     LayerStack
@@ -22,7 +28,8 @@ from work.library.plotting import (
 from work.library.plotting.contracts import (
     FigureConfig,
     ChartConfig,
-    PlotLayer
+    PlotLayer,
+    PlotContext
 )
 from work.library.plotting.rendering import (
     Renderer,
@@ -34,12 +41,14 @@ class PlotSession:
     """
     Stateful plotting session.
 
-    The session acts as the main orchestration object for chart creation.
-    It stores:
+    The session acts as the main orchestration object for chart
+    creation. It stores:
+
     - the current layer stack;
     - figure-level configuration;
     - chart-level metadata;
-    - the active rendering backend.
+    - the active rendering backend;
+    - the active Matplotlib figure context.
 
     The API is intentionally fluent so that layers and labels can be
     assembled in a chainable style before rendering.
@@ -66,15 +75,16 @@ class PlotSession:
         Parameters
         ----------
         renderer : Optional[Renderer], optional
-            Rendering backend used to convert the layer stack into a figure.
-            If omitted, the default Matplotlib renderer is used.
+            Rendering backend used to convert the layer stack into a
+            figure. If omitted, the default Matplotlib renderer is used.
 
         figure_config : Optional[FigureConfig], optional
-            Figure-level configuration. If omitted, default values are used.
+            Figure-level configuration. If omitted, default values are
+            used.
 
         chart_config : Optional[ChartConfig], optional
-            Chart-level visual configuration.
-            If omitted, default values are used.
+            Chart-level visual configuration. If omitted, default values
+            are used.
         """
 
         self._renderer = renderer or MatplotlibRenderer()
@@ -82,6 +92,7 @@ class PlotSession:
         self._chart_config = chart_config or ChartConfig()
 
         self._stack = LayerStack()
+        self._context: Optional[PlotContext] = None
 
     # ==========================================
     # LAYER MANAGEMENT
@@ -133,7 +144,7 @@ class PlotSession:
     # CHART METADATA
     # ==========================================
 
-    def title(
+    def set_title(
         self,
         value: str
     ) -> Self:
@@ -154,7 +165,7 @@ class PlotSession:
         self._chart_config.title = value
         return self
 
-    def xlabel(
+    def set_xlabel(
         self,
         value: str
     ) -> Self:
@@ -175,7 +186,7 @@ class PlotSession:
         self._chart_config.xlabel = value
         return self
 
-    def ylabel(
+    def set_ylabel(
         self,
         value: str
     ) -> Self:
@@ -196,19 +207,8 @@ class PlotSession:
         self._chart_config.ylabel = value
         return self
 
-    def get_stack(self) -> LayerStack:
-        """
-        Return the current plot layer stack.
-
-        Returns
-        -------
-        LayerStack
-            Active session layer stack.
-        """
-
-        return self._stack
-
-    def get_title(self) -> Optional[str]:
+    @property
+    def title(self) -> Optional[str]:
         """
         Return the current chart title.
 
@@ -220,7 +220,8 @@ class PlotSession:
 
         return self._chart_config.title
 
-    def get_xlabel(self) -> Optional[str]:
+    @property
+    def xlabel(self) -> Optional[str]:
         """
         Return the current x-axis label.
 
@@ -232,7 +233,8 @@ class PlotSession:
 
         return self._chart_config.xlabel
 
-    def get_ylabel(self) -> Optional[str]:
+    @property
+    def ylabel(self) -> Optional[str]:
         """
         Return the current y-axis label.
 
@@ -244,22 +246,114 @@ class PlotSession:
 
         return self._chart_config.ylabel
 
-    def reset(self) -> None:
-        """
-        Reset the session to an empty plotting state.
+    # ==========================================
+    # STATE MANAGEMENT
+    # ==========================================
 
-        This method clears all stored layers and resets chart metadata
-        to default values.
+    def clear_layers(self) -> Self:
+        """
+        Remove all layers from the session.
 
         Returns
         -------
-        None
-            Session state is reset by side effect.
+        Self
+            The current session instance for fluent chaining.
         """
 
         self._stack.clear()
 
+        return self
+
+    def clear_metadata(self) -> Self:
+        """
+        Reset chart metadata to default values.
+
+        Returns
+        -------
+        Self
+            The current session instance for fluent chaining.
+        """
+
         self._chart_config.reset()
+
+        return self
+
+    def clear_figure(self) -> Self:
+        """
+        Close and release the active Matplotlib figure.
+
+        Returns
+        -------
+        Self
+            The current session instance for fluent chaining.
+        """
+
+        if self._context is not None:
+            plt.close(fig=self._context.figure)
+
+            self._context = None
+
+        return self
+
+    def reset(self) -> Self:
+        """
+        Reset the session to an empty plotting state.
+
+        This method clears all stored layers, resets chart metadata,
+        and releases the active figure context.
+
+        Returns
+        -------
+        Self
+            The current session instance for fluent chaining.
+        """
+
+        self.clear_layers()
+        self.clear_metadata()
+        self.clear_figure()
+
+        return self
+
+    # ==========================================
+    # INTROSPECTION
+    # ==========================================
+
+    def has_figure(self) -> bool:
+        """
+        Check whether a figure context already exists.
+
+        Returns
+        -------
+        bool
+            True if the session has an active figure context, otherwise
+            False.
+        """
+
+        return self._context is not None
+
+    def has_layers(self) -> bool:
+        """
+        Check whether the session contains at least one layer.
+
+        Returns
+        -------
+        bool
+            True if one or more layers are present, otherwise False.
+        """
+
+        return self.layer_count() > 0
+
+    def layer_count(self) -> int:
+        """
+        Return the number of layers currently stored in the session.
+
+        Returns
+        -------
+        int
+            Number of plot layers in the stack.
+        """
+
+        return len(self._stack)
 
     # ==========================================
     # RENDERING
@@ -276,12 +370,74 @@ class PlotSession:
 
         Notes
         -----
-        Rendering is delegated to the configured renderer backend using the
-        current layer stack, figure configuration, and chart configuration.
+        Rendering is delegated to the configured renderer backend using
+        the current layer stack, figure configuration, chart
+        configuration, and active plot context.
         """
 
-        return self._renderer.render(
+        context = self._ensure_context()
+        self._clear_axes()
+
+        self._renderer.render(
             stack=self._stack,
-            figure_config=self._figure_config,
+            context=context,
             chart_config=self._chart_config
         )
+
+        if self._figure_config.tight_layout:
+            context.figure.tight_layout()
+
+        return context.figure
+
+    # ==========================================
+    # INTERNAL
+    # ==========================================
+
+    def _ensure_context(self) -> PlotContext:
+        """
+        Ensure that the session has an active plot context.
+
+        If no context exists, a new Matplotlib figure with primary and
+        overlay axes is created and stored.
+
+        Returns
+        -------
+        PlotContext
+            Active plot context.
+        """
+
+        if self._context is not None:
+            return self._context
+
+        figure, primary_axes = plt.subplots(  # type: ignore
+            figsize=self._figure_config.figsize,
+            dpi=self._figure_config.dpi
+        )
+
+        overlay_axes = primary_axes.twinx()
+
+        context = PlotContext(
+            figure=figure,
+            primary_axes=primary_axes,
+            overlay_axes=overlay_axes
+        )
+
+        self._context = context
+
+        return context
+
+    def _clear_axes(self) -> None:
+        """
+        Clear all axes in the active figure context.
+
+        Returns
+        -------
+        None
+            Axes are cleared by side effect.
+        """
+
+        if self._context is None:
+            return
+
+        self._context.primary_axes.clear()
+        self._context.overlay_axes.clear()
