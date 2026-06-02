@@ -4,7 +4,7 @@ This module verifies schema, type, nullability, and business-rule checks
 performed by the StockQuoteValidator.
 
 Test coverage includes:
-- reject emty dataset
+- reject empty dataset
 - required column presence
 - datetime, string, numeric, and integer type validation
 - null value detection
@@ -30,7 +30,7 @@ def test_empty_dataframe() -> None:
 
     df = DataFrameFactory.valid(rows=0)
 
-    with pytest.raises(ValueError, match="Dataframe is emty"):
+    with pytest.raises(ValueError, match="Dataframe is empty"):
         StockQuoteValidator.validate(df)
 
 
@@ -57,7 +57,7 @@ def test_missing_column() -> None:
     df = DataFrameFactory.valid()
     df = df.drop(columns=[S.OPEN_PRICE])
 
-    with pytest.raises(ValueError, match="Missing columns"):
+    with pytest.raises(ValueError, match=f"'{S.OPEN_PRICE}': required column is missing"):
         StockQuoteValidator.validate(df)
 
 
@@ -71,7 +71,7 @@ def test_invalid_trade_date_type() -> None:
 
     df = DataFrameFactory.with_invalid_datetime()
 
-    with pytest.raises(ValueError, match="must be datetime"):
+    with pytest.raises(ValueError, match="not valid dates"):
         StockQuoteValidator.validate(df)
 
 
@@ -83,7 +83,7 @@ def test_invalid_string_type() -> None:
 
     df[S.SOURCE] = [15]
 
-    with pytest.raises(ValueError, match="must be string"):
+    with pytest.raises(ValueError, match="values are not text"):
         StockQuoteValidator.validate(df)
 
 
@@ -95,7 +95,7 @@ def test_invalid_numeric_type() -> None:
 
     df[S.OPEN_PRICE] = ["bad", "data"]
 
-    with pytest.raises(ValueError, match="must be numeric"):
+    with pytest.raises(ValueError, match="contains non-numeric values"):
         StockQuoteValidator.validate(df)
 
 
@@ -107,7 +107,7 @@ def test_invalid_integer_type() -> None:
 
     df[S.VOLUME] = [1000.5, 2000.5]
 
-    with pytest.raises(ValueError, match="must be integer"):
+    with pytest.raises(ValueError, match="contains non-integer values"):
         StockQuoteValidator.validate(df)
 
 
@@ -123,7 +123,7 @@ def test_null_values() -> None:
 
     df.loc[0, S.CLOSE_PRICE] = None
 
-    with pytest.raises(ValueError, match="Null values"):
+    with pytest.raises(ValueError, match=f"'{S.CLOSE_PRICE}': has 1 missing value"):
         StockQuoteValidator.validate(df)
 
 
@@ -139,7 +139,7 @@ def test_invalid_ohlc() -> None:
     df[S.HIGH_PRICE] = [80.0, 70.0]
     df[S.LOW_PRICE] = [90, 80]
 
-    with pytest.raises(ValueError, match="Invalid OHLC"):
+    with pytest.raises(ValueError, match="high < low"):
         StockQuoteValidator.validate(df)
 
 
@@ -155,5 +155,5 @@ def test_negative_volume() -> None:
 
     df[S.VOLUME] = [-1, 1000]
 
-    with pytest.raises(ValueError, match="Negative volume"):
+    with pytest.raises(ValueError, match="have negative volume"):
         StockQuoteValidator.validate(df)

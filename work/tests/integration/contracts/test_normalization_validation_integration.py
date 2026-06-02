@@ -134,7 +134,7 @@ def test_pipeline_invalid_ohlc_logic():
     df[S.HIGH_PRICE] = [80.0, 70.0]
     df[S.LOW_PRICE] = [90, 80]
 
-    with pytest.raises(ValueError, match="Invalid OHLC"):
+    with pytest.raises(ValueError, match="high < low"):
         run_pipeline(df)
 
 
@@ -149,7 +149,7 @@ def test_pipeline_negative_volume():
     df = DataFrameFactory.valid()
     df[S.VOLUME] = [-2]
 
-    with pytest.raises(ValueError, match="Negative volume"):
+    with pytest.raises(ValueError, match="have negative volume"):
         run_pipeline(df)
 
 

@@ -68,6 +68,7 @@ class StockQuoteMapper:
         df.columns = df.columns.str.strip()
 
         resolved = cls._resolve_columns(df)
+        cls._validate_resolved(df, resolved)
         df = cls._apply_mapping(df, resolved)
 
         df = cls._ensure_source(df, source)
@@ -102,13 +103,90 @@ class StockQuoteMapper:
         """
 
         return {
-            S.TRADE_DATE: cls._find_column(df, cls.ALIASES.TRADE_DATE),
-            S.OPEN_PRICE: cls._find_column(df, cls.ALIASES.OPEN_PRICE),
-            S.HIGH_PRICE: cls._find_column(df, cls.ALIASES.HIGH_PRICE),
-            S.LOW_PRICE: cls._find_column(df, cls.ALIASES.LOW_PRICE),
-            S.CLOSE_PRICE: cls._find_column(df, cls.ALIASES.CLOSE_PRICE),
-            S.VOLUME: cls._find_column(df, cls.ALIASES.VOLUME),
+            field: cls._find_column(df, aliases)
+            for field, aliases in cls._aliases_by_field().items()
         }
+
+    @classmethod
+    def _aliases_by_field(cls) -> Dict[str, List[str]]:
+        """
+        Return the accepted source column names for each internal field.
+
+        The canonical internal schema name is treated as an implicit alias,
+        so datasets that already use internal names resolve to themselves.
+        Duplicate names (when an alias equals the canonical name) are
+        removed while preserving order.
+
+        Returns
+        -------
+        dict[str, list[str]]
+            Mapping of internal schema names to their accepted aliases.
+        """
+
+        def _dedup(*names: str) -> List[str]:
+            return list(dict.fromkeys(names))
+
+        return {
+            S.TRADE_DATE: _dedup(S.TRADE_DATE, *cls.ALIASES.TRADE_DATE),
+            S.OPEN_PRICE: _dedup(S.OPEN_PRICE, *cls.ALIASES.OPEN_PRICE),
+            S.HIGH_PRICE: _dedup(S.HIGH_PRICE, *cls.ALIASES.HIGH_PRICE),
+            S.LOW_PRICE: _dedup(S.LOW_PRICE, *cls.ALIASES.LOW_PRICE),
+            S.CLOSE_PRICE: _dedup(S.CLOSE_PRICE, *cls.ALIASES.CLOSE_PRICE),
+            S.VOLUME: _dedup(S.VOLUME, *cls.ALIASES.VOLUME),
+        }
+
+    @classmethod
+    def _validate_resolved(
+        cls,
+        df: pd.DataFrame,
+        resolved: Dict[str, Optional[str]]
+    ) -> None:
+        """
+        Ensure every required source column was resolved from the CSV.
+
+        Parameters
+        ----------
+        df : pd.DataFrame
+            Raw input dataframe (used to report the actual CSV headers).
+
+        resolved : dict[str, Optional[str]]
+            Mapping of internal schema names to matched external columns.
+            A value of ``None`` means no CSV column matched the field's
+            aliases.
+
+        Raises
+        ------
+        ValueError
+            If one or more required columns could not be resolved. The
+            error names each missing internal column, the aliases that
+            were searched, and the headers actually present in the file.
+        """
+
+        aliases_by_field = cls._aliases_by_field()
+
+        missing = [
+            field
+            for field, external in resolved.items()
+            if external is None
+        ]
+
+        if not missing:
+            return
+
+        present = list(df.columns)
+        lines = []
+        for field in missing:
+            accepted = ", ".join(f"'{a}'" for a in aliases_by_field[field])
+            lines.append(
+                f"  - '{field}': no matching column found. "
+                f"Fix: rename one of your columns to one of [{accepted}]."
+            )
+        body = "\n".join(lines)
+        raise ValueError(
+            "Invalid CSV: cannot map the following column(s):\n"
+            f"{body}\n"
+            f"Columns found in file: {present}."
+        )
 
     @classmethod
     def _find_column(
