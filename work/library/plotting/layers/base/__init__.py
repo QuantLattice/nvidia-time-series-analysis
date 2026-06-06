@@ -1,19 +1,28 @@
 """
 Base layer abstractions for the plotting system.
 
-This package defines the fundamental hierarchy of plot layers used
-in the rendering engine.
+This package defines the foundational layer hierarchy used throughout
+the rendering engine.
 
-The abstraction separates visualization logic into two main domains:
+The provided abstractions establish common behavior shared by all plot
+layers, including placement management and rendering contracts.
 
-- Numerical layers: continuous data representations (lines, curves,
-  histograms, scatter plots)
+Layer categories
+----------------
+BaseLayer
+    Root abstraction for all renderable plot layers.
 
-- Categorical layers: discrete grouped data representations (bar charts,
-  box plots, category-based visualizations)
+NumericalLayer
+    Base class for layers representing continuous numerical data.
 
-These base classes enforce a consistent contract for styling and
-rendering behavior across all plot types.
+CategoricalLayer
+    Base class for layers representing discrete or grouped data.
+
+Notes
+-----
+Not all layer implementations are required to belong to a specific
+domain abstraction. Specialized layer types may inherit directly from
+BaseLayer when neither numerical nor categorical semantics apply.
 """
 
 
@@ -31,5 +40,5 @@ from .numerical import (
 __all__ = [
     "BaseLayer",
     "CategoricalLayer",
-    "NumericalLayer"
+    "NumericalLayer",
 ]

@@ -1,15 +1,15 @@
 """
 Core plot layer implementations.
 
-This package defines the concrete layer implementations used in the
+This package defines the reusable layer implementations used by the
 layered plotting system.
 
-It represents the primary composition unit of the rendering engine,
-where each layer encapsulates both data and rendering logic.
+Layers serve as the primary composition units of the rendering engine,
+encapsulating both visualization data and rendering behavior.
 
 Architecture
 ------------
-The layer system is organized into three hierarchical domains:
+The layer system is organized into multiple domains:
 
 Base layers
     Abstract foundation classes defining rendering contracts and
@@ -23,17 +23,21 @@ Categorical layers
     Discrete data visualizations such as bar charts, box plots,
     and histograms.
 
+Matrix layers
+    Matrix-oriented visualizations such as heatmaps.
+
 Design goals
--------------
+------------
 - composable rendering primitives;
-- separation between numerical and categorical domains;
-- backend-independent rendering contract;
-- consistent styling interface across all layer types.
+- separation of visualization domains;
+- backend-independent rendering contracts;
+- reusable styling abstractions;
+- consistent rendering behavior across layer types.
 
 Notes
 -----
 All layers implement the shared PlotLayer contract and are designed
-to be compatible with Matplotlib-based rendering backends.
+to operate with Matplotlib-based rendering backends.
 """
 
 
@@ -52,6 +56,9 @@ from .categorical import (
     BoxLayer,
     HistogramLayer
 )
+from .matrix import (
+    HeatmapLayer
+)
 
 
 __all__ = [
@@ -65,5 +72,7 @@ __all__ = [
 
     "BarLayer",
     "BoxLayer",
-    "HistogramLayer"
+    "HistogramLayer",
+
+    "HeatmapLayer"
 ]

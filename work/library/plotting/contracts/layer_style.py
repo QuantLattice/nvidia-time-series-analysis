@@ -14,6 +14,7 @@ The style system is organized as follows:
 - BarStyle: styling for categorical bar plots
 - BoxStyle: styling for statistical box plots
 - HistogramStyle: styling for histogram plots
+- HeatmapStyle: styling for matrix-based heatmap plots
 
 All style classes are designed as lightweight configuration objects
 and are consumed by the rendering backend (e.g. MatplotlibRenderer).
@@ -26,7 +27,8 @@ from typing import Optional
 from .types import (
     LineStyleLiteral,
     MarkerStyle,
-    HatchStyle
+    HatchStyle,
+    ColormapLiteral
 )
 
 
@@ -274,5 +276,56 @@ class HistogramStyle(LayerStyle):
     edgecolor: Optional[str] = None
 
     hatch: Optional[HatchStyle] = None
+
+    alpha: Optional[float] = None
+
+
+@dataclass(slots=True)
+class HeatmapStyle:
+    """
+    Style configuration for heatmap layers.
+
+    HeatmapStyle is intentionally independent from LayerStyle because
+    matrix-based rendering uses an image-oriented pipeline rather than
+    the primitive artist-based pipeline used by the other layer types.
+
+    Attributes
+    ----------
+    cmap : Optional[ColormapLiteral]
+        Colormap used to map values to colors.
+
+    annotate : bool
+        Whether to draw numeric annotations inside heatmap cells.
+
+    annotation_format : str
+        Format string used to display annotation values.
+
+    annotation_color : Optional[str]
+        Fixed annotation color. If not provided, the color is chosen
+        automatically based on background brightness.
+
+    show_colorbar : bool
+        Whether to display a colorbar next to the heatmap.
+
+    vmin : Optional[float]
+        Lower bound for color normalization.
+
+    vmax : Optional[float]
+        Upper bound for color normalization.
+
+    alpha : Optional[float]
+        Global transparency of the heatmap image.
+    """
+
+    cmap: Optional[ColormapLiteral] = None
+
+    annotate: bool = True
+    annotation_format: str = ".2f"
+    annotation_color: Optional[str] = None
+
+    show_colorbar: bool = True
+
+    vmin: Optional[float] = None
+    vmax: Optional[float] = None
 
     alpha: Optional[float] = None

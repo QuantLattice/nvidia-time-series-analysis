@@ -5,31 +5,36 @@ This module defines the main entry point of the plotting system,
 providing access to session management, layer composition, and
 rendering orchestration utilities.
 
-It serves as a high-level interface over the internal plotting
-architecture, which is composed of:
+It exposes a high-level interface over the internal layered
+rendering architecture.
+
+Architecture
+------------
+The plotting system is composed of four core subsystems:
 
 Orchestration layer
-    PlotSession and LayerStack, responsible for building and managing
-    plot composition before rendering.
+    PlotSession and LayerStack, responsible for constructing and
+    managing plot compositions prior to rendering.
 
 Layer system
-    Composable visualization primitives that define rendering logic
-    for numerical and categorical data.
+    Composable visualization primitives defining rendering behavior
+    for different data domains, including numerical, categorical,
+    and matrix-based representations.
 
-Configuration layer
+Configuration system
     ChartConfig, FigureConfig, and style objects controlling visual
-    appearance and layout behavior.
+    appearance, layout, and rendering options.
 
-Contract layer
-    Abstract interfaces and shared types defining rendering semantics
-    across all components.
+Contract system
+    Abstract interfaces and shared types defining rendering semantics,
+    placement rules, and styling contracts.
 
 Design goals
 ------------
 - provide a stable and minimal public API surface;
 - separate composition, configuration, and rendering concerns;
-- ensure backend-independent plot construction;
-- support composable multi-layer visualizations.
+- support backend-independent plot construction;
+- enable composable multi-layer visualizations across data domains.
 
 Notes
 -----
@@ -53,7 +58,8 @@ from .contracts import (
     FillBetweenStyle,
     BarStyle,
     BoxStyle,
-    HistogramStyle
+    HistogramStyle,
+    HeatmapStyle
 )
 from .layers import (
     BaseLayer,
@@ -65,6 +71,7 @@ from .layers import (
     BarLayer,
     BoxLayer,
     HistogramLayer,
+    HeatmapLayer
 )
 
 
@@ -82,6 +89,7 @@ __all__ = [
     "BarStyle",
     "BoxStyle",
     "HistogramStyle",
+    "HeatmapStyle",
 
     "BaseLayer",
     "CategoricalLayer",
@@ -91,5 +99,6 @@ __all__ = [
     "ScatterLayer",
     "BarLayer",
     "BoxLayer",
-    "HistogramLayer"
+    "HistogramLayer",
+    "HeatmapLayer"
 ]

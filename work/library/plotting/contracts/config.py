@@ -40,7 +40,7 @@ class FigureConfig:
 
     figsize: Optional[Tuple[float, float]] = None
     dpi: Optional[float] = None
-    tight_layout: bool = True
+    tight_layout: bool = False
 
 
 @dataclass(slots=True)

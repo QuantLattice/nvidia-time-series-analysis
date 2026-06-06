@@ -1,37 +1,39 @@
 """
 Public API for the plotting contracts subsystem.
 
-This package defines the core abstractions and configuration
-objects used across the plotting framework.
+This package defines the core abstractions, configuration objects,
+and type constraints used across the plotting framework.
 
 It serves as a stable interface boundary between:
 
 - plot composition logic (layers and placement);
 - rendering backend implementations;
 - session-level orchestration;
-- shared configuration structures.
+- shared configuration and styling structures.
 
-The design follows a strict separation of concerns:
+Architecture
+------------
+The contracts system is organized into the following layers:
 
 Configuration layer
     FigureConfig, ChartConfig, AxisVisibilityConfig, ChartStyle
 
-Rendering layer
+Rendering context layer
     PlotContext
 
 Layer abstraction layer
     PlotLayer, LayerPlacement
 
 Styling layer
-    LayerStyle and specialized style variants
+    LayerStyle and specialized style variants for different plot types
 
 Type constraints layer
-    Literal types for Matplotlib-compatible styling options
+    Literal types defining Matplotlib-compatible styling options
 
 Notes
 -----
-These contracts are intentionally backend-agnostic and do not
-depend on any specific rendering implementation.
+These contracts are intentionally independent of any rendering
+implementation and can be reused across different backends.
 """
 
 
@@ -56,11 +58,13 @@ from .layer_style import (
     BarStyle,
     BoxStyle,
     HistogramStyle,
+    HeatmapStyle
 )
 from .types import (
     LineStyleLiteral,
     MarkerStyle,
-    HatchStyle
+    HatchStyle,
+    ColormapLiteral
 )
 
 
@@ -80,8 +84,10 @@ __all__ = [
     "BarStyle",
     "BoxStyle",
     "HistogramStyle",
+    "HeatmapStyle",
 
     "LineStyleLiteral",
     "MarkerStyle",
-    "HatchStyle"
+    "HatchStyle",
+    "ColormapLiteral"
 ]
