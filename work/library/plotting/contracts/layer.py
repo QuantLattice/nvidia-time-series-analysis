@@ -1,12 +1,22 @@
 """
-Plot layer contracts.
+Core abstractions for composable plot layers.
 
-This module defines the abstract interface and placement metadata
-used by layered plotting components.
+This module defines the base contract for all renderable plot layers
+used in the layered plotting architecture.
 
-The layer contract is designed to support composable chart rendering,
-including primary plot content and overlay elements such as
-reference lines, annotations, or secondary series.
+The system is built around a two-level composition model:
+
+- PRIMARY layers: main visual content of the chart
+- OVERLAY layers: auxiliary visual elements rendered on top of primary content
+
+Each layer implements a rendering contract targeting a Matplotlib Axes
+instance, allowing the plotting system to remain backend-agnostic while
+still supporting Matplotlib as the default renderer.
+
+Notes
+-----
+This abstraction enables modular chart construction where visual elements
+are composed rather than hard-coded into monolithic plotting functions.
 """
 
 
@@ -17,15 +27,19 @@ from matplotlib.axes import Axes
 
 class LayerPlacement(StrEnum):
     """
-    Placement strategy for plot layers.
+    Defines the rendering layer category in a compositional chart.
 
-    Members
-    -------
+    Layer placement determines how a plot layer is integrated into the
+    rendering pipeline.
+
+    Attributes
+    ----------
     PRIMARY : str
-        Main plotting layer responsible for the core visualization.
+        Main visualization layer containing core chart data.
 
     OVERLAY : str
-        Secondary layer rendered on top of the primary layer.
+        Auxiliary layer rendered above primary content, typically used
+        for annotations, reference lines, or secondary data series.
     """
 
     PRIMARY = "primary"
@@ -34,49 +48,78 @@ class LayerPlacement(StrEnum):
 
 class PlotLayer(ABC):
     """
-    Abstract base class for plot layers.
+    Abstract contract for all renderable plot layers.
 
-    A plot layer represents a single renderable visualization component
-    that can be composed with other layers inside a plotting session.
+    A plot layer represents a single composable visualization unit that
+    can be combined with other layers within a plotting session.
 
-    Subclasses must define:
-    - placement information;
-    - render behavior for a Matplotlib Axes instance.
+    Each layer defines:
+    - its placement in the rendering pipeline;
+    - a unique identifier;
+    - a rendering method targeting a Matplotlib Axes instance.
+
+    This design enables declarative composition of charts from independent
+    visual components.
 
     Notes
     -----
-    This abstraction allows charts to be built as layered compositions
-    rather than monolithic plotting functions.
+    Implementations must be stateless with respect to rendering context
+    and should rely solely on provided data and configuration.
     """
+
+    # ------------------------------------------------------------------
+    # Abstract API
+    # ------------------------------------------------------------------
+
+    @property
+    @abstractmethod
+    def id(self) -> str:
+        """
+        Unique identifier of the plot layer.
+
+        Returns
+        -------
+        str
+            Stable identifier used for tracking, debugging, or caching.
+        """
+
+        ...
 
     @property
     @abstractmethod
     def placement(self) -> LayerPlacement:
         """
-        Return the placement category for the layer.
+        Define the layer placement within the rendering pipeline.
 
         Returns
         -------
         LayerPlacement
-            Placement of the layer within the plot composition pipeline.
+            Placement category (PRIMARY or OVERLAY).
         """
 
         ...
 
+    # ------------------------------------------------------------------
+    # Rendering
+    # ------------------------------------------------------------------
+
     @abstractmethod
-    def render(self, axes: Axes) -> None:
+    def render(
+        self,
+        axes: Axes
+    ) -> None:
         """
-        Render the layer on a Matplotlib axes object.
+        Render the layer onto a Matplotlib Axes instance.
 
         Parameters
         ----------
         axes : Axes
             Target Matplotlib axes used for drawing.
 
-        Returns
-        -------
-        None
-            The method performs rendering by side effect.
+        Notes
+        -----
+        Rendering is performed as a side effect on the provided axes.
+        Implementations must not modify global plotting state.
         """
 
         ...

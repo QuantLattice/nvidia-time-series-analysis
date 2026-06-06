@@ -1,27 +1,45 @@
 """
-Plotting contracts and shared data structures.
+Public API for the plotting contracts subsystem.
 
-This package defines configuration objects, rendering context
-containers, and abstract interfaces used throughout the plotting
-subsystem.
+This package defines the core abstractions and configuration
+objects used across the plotting framework.
 
-Provided contracts include:
+It serves as a stable interface boundary between:
 
-- figure-level configuration;
-- chart-level configuration;
-- rendering context objects;
-- plot layer abstractions;
-- layer placement definitions.
+- plot composition logic (layers and placement);
+- rendering backend implementations;
+- session-level orchestration;
+- shared configuration structures.
 
-The contracts are intentionally lightweight and independent from
-specific plotting implementations, allowing different rendering
-backends and layer types to share a common API.
+The design follows a strict separation of concerns:
+
+Configuration layer
+    FigureConfig, ChartConfig, AxisVisibilityConfig, ChartStyle
+
+Rendering layer
+    PlotContext
+
+Layer abstraction layer
+    PlotLayer, LayerPlacement
+
+Styling layer
+    LayerStyle and specialized style variants
+
+Type constraints layer
+    Literal types for Matplotlib-compatible styling options
+
+Notes
+-----
+These contracts are intentionally backend-agnostic and do not
+depend on any specific rendering implementation.
 """
 
 
 from .config import (
     FigureConfig,
-    ChartConfig
+    ChartConfig,
+    AxisVisibilityConfig,
+    ChartStyle
 )
 from .layer import (
     LayerPlacement,
@@ -30,12 +48,40 @@ from .layer import (
 from .plot_context import (
     PlotContext
 )
+from .layer_style import (
+    LayerStyle,
+    LineStyle,
+    ScatterStyle,
+    FillBetweenStyle,
+    BarStyle,
+    BoxStyle,
+    HistogramStyle,
+)
+from .types import (
+    LineStyleLiteral,
+    MarkerStyle,
+    HatchStyle
+)
 
 
 __all__ = [
     "FigureConfig",
     "ChartConfig",
+    "AxisVisibilityConfig",
+    "ChartStyle",
     "LayerPlacement",
     "PlotLayer",
-    "PlotContext"
+    "PlotContext",
+
+    "LayerStyle",
+    "LineStyle",
+    "ScatterStyle",
+    "FillBetweenStyle",
+    "BarStyle",
+    "BoxStyle",
+    "HistogramStyle",
+
+    "LineStyleLiteral",
+    "MarkerStyle",
+    "HatchStyle"
 ]

@@ -4,15 +4,29 @@ Plot layer stack management.
 This module provides a lightweight container for managing plot layers
 within a plotting session.
 
-The stack supports:
-- adding individual layers;
-- extending from iterables of layers;
-- separating primary and overlay layers by placement;
-- iteration and inspection utilities.
+The stack acts as an intermediate composition layer between:
+- session orchestration (PlotSession);
+- rendering backend (Renderer implementations).
+
+It is responsible for:
+- storing layers in insertion order;
+- enforcing uniqueness of layers (by id if available);
+- separating layers by placement type;
+- providing query utilities for rendering pipelines.
+
+Design principle
+-----------------
+The stack is intentionally framework-agnostic and does not perform any
+rendering logic. It only organizes and indexes layers for downstream
+consumption.
 """
 
 
-from typing import Iterable, List
+from typing import (
+    Iterable,
+    List,
+    Optional
+)
 
 from work.library.plotting.contracts import (
     LayerPlacement,
@@ -25,23 +39,29 @@ class LayerStack:
     Container for plot layers used during rendering.
 
     The stack stores plot layers in insertion order and provides helper
-    methods for grouping layers by placement category.
-
-    The class is intentionally minimal and acts as the session-level
-    layer registry for the plotting subsystem.
+    methods for grouping and querying layers by placement.
 
     Notes
     -----
-    The stack does not perform rendering itself. It only stores and
-    organizes plot layers for later consumption by a renderer.
+    - The stack does not perform rendering.
+    - It acts as a registry for PlotLayer objects.
+    - Ordering is preserved for deterministic rendering.
     """
+
+    # ------------------------------------------------------------------
+    # Construction
+    # ------------------------------------------------------------------
 
     def __init__(self) -> None:
         """
-        Initialize an empty plot layer stack.
+        Initialize an empty layer stack.
         """
 
         self._layers: List[PlotLayer] = []
+
+    # ------------------------------------------------------------------
+    # Layer management
+    # ------------------------------------------------------------------
 
     def add_layer(
         self,
@@ -50,16 +70,20 @@ class LayerStack:
         """
         Add a single plot layer to the stack.
 
+        If a layer with the same identifier already exists, it is
+        replaced to ensure uniqueness.
+
         Parameters
         ----------
         layer : PlotLayer
-            Plot layer to append.
+            Plot layer to append to the stack.
 
         Returns
         -------
         None
-            The layer is stored by side effect.
         """
+
+        self.remove_by_id(layer_id=layer.id)
 
         self._layers.append(layer)
 
@@ -73,15 +97,95 @@ class LayerStack:
         Parameters
         ----------
         layers : Iterable[PlotLayer]
-            Iterable of plot layers to append.
+            Iterable of plot layers.
 
         Returns
         -------
         None
-            Layers are stored by side effect.
         """
 
-        self._layers.extend(layers)
+        for layer in layers:
+            self.add_layer(layer)
+
+    def remove_layer(
+        self,
+        layer: PlotLayer
+    ) -> bool:
+        """
+        Remove a layer instance from the stack.
+
+        Parameters
+        ----------
+        layer : PlotLayer
+            Layer to remove.
+
+        Returns
+        -------
+        bool
+            True if layer was removed, False otherwise.
+        """
+
+        return self.remove_by_id(layer.id)
+
+    def remove_by_id(
+        self,
+        layer_id: str
+    ) -> bool:
+        """
+        Remove a layer by its identifier.
+
+        Parameters
+        ----------
+        layer_id : str
+            Unique identifier of the layer.
+
+        Returns
+        -------
+        bool
+            True if a layer was removed, False otherwise.
+        """
+
+        for index, layer in enumerate(self._layers):
+            if layer.id == layer_id:
+                del self._layers[index]
+                return True
+
+        return False
+
+    def clear(self) -> None:
+        """
+        Remove all layers from the stack.
+        """
+
+        self._layers.clear()
+
+    # ------------------------------------------------------------------
+    # Queries
+    # ------------------------------------------------------------------
+
+    def get_by_id(
+        self,
+        layer_id: str
+    ) -> Optional[PlotLayer]:
+        """
+        Retrieve a layer by its identifier.
+
+        Parameters
+        ----------
+        layer_id : str
+            Layer identifier.
+
+        Returns
+        -------
+        Optional[PlotLayer]
+            Matching layer or None if not found.
+        """
+
+        for layer in self._layers:
+            if layer.id == layer_id:
+                return layer
+
+        return None
 
     def get_all(self) -> List[PlotLayer]:
         """
@@ -123,17 +227,21 @@ class LayerStack:
             placement=LayerPlacement.OVERLAY
         )
 
-    def clear(self) -> None:
+    def has_overlay_layers(self) -> bool:
         """
-        Remove all stored layers.
+        Check whether overlay layers exist.
 
         Returns
         -------
-        None
-            The stack is cleared by side effect.
+        bool
+            True if overlay layers are present.
         """
 
-        self._layers.clear()
+        return len(self.overlay_layers()) > 0
+
+    # ------------------------------------------------------------------
+    # Collection protocol
+    # ------------------------------------------------------------------
 
     def __iter__(self):
         """
@@ -170,6 +278,10 @@ class LayerStack:
         """
 
         return f"LayerStack(layers={len(self)})"
+
+    # ------------------------------------------------------------------
+    # Internal helpers
+    # ------------------------------------------------------------------
 
     def _get_layers_by_placement(
         self,
