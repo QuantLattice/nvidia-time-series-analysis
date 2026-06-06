@@ -15,6 +15,7 @@ The style system is organized as follows:
 - BoxStyle: styling for statistical box plots
 - HistogramStyle: styling for histogram plots
 - HeatmapStyle: styling for matrix-based heatmap plots
+- CandlestickStyle: styling for financial candlestick plots
 
 All style classes are designed as lightweight configuration objects
 and are consumed by the rendering backend (e.g. MatplotlibRenderer).
@@ -186,7 +187,7 @@ class BarStyle(LayerStyle):
     edgecolor : Optional[str]
         Color of bar edges.
 
-    linewidth : Optional[float]
+    edge_linewidth : Optional[float]
         Thickness of bar edges.
 
     hatch : Optional[HatchStyle]
@@ -198,7 +199,7 @@ class BarStyle(LayerStyle):
 
     edgecolor: Optional[str] = None
 
-    linewidth: Optional[float] = None
+    edge_linewidth: Optional[float] = None
 
     hatch: Optional[HatchStyle] = None
 
@@ -329,3 +330,67 @@ class HeatmapStyle:
     vmax: Optional[float] = None
 
     alpha: Optional[float] = None
+
+
+@dataclass(slots=True)
+class CandlestickStyle:
+    """
+    Style configuration for financial candlestick layers.
+
+    This style defines visual properties for open-high-low-close
+    chart elements, including candle body colors, wick styling,
+    outline appearance, and optional hatch patterns.
+
+    Attributes
+    ----------
+    linestyle : Optional[LineStyleLiteral]
+        Line style used for wicks and candle edges.
+
+    edgecolor : Optional[str]
+        Color of candle body edges.
+
+    edge_linewidth : Optional[float]
+        Width of the candle body edges.
+
+    up_color : str
+        Fill color used for bullish candles where close >= open.
+
+    down_color : str
+        Fill color used for bearish candles where close < open.
+
+    wick_color : str
+        Color of the candle wicks.
+
+    wick_linewidth : float
+        Line width used for the candle wicks.
+
+    body_alpha : float
+        Transparency level of the candle body.
+
+    wick_alpha : Optional[float]
+        Transparency level of the candle wicks.
+
+    hatch : Optional[HatchStyle]
+        Hatch pattern applied to the candle body.
+
+    zorder : Optional[int]
+        Drawing order relative to other layers.
+    """
+
+    linestyle: Optional[LineStyleLiteral] = None
+
+    edgecolor: Optional[str] = None
+    edge_linewidth: Optional[float] = None
+
+    up_color: str = "green"
+    down_color: str = "red"
+
+    wick_color: str = "black"
+    wick_linewidth: float = 1.0
+
+    body_alpha: float = 0.8
+    wick_alpha: Optional[float] = None
+
+    hatch: Optional[HatchStyle] = None
+
+    zorder: Optional[int] = None

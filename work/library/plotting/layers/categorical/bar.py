@@ -161,7 +161,7 @@ class BarLayer(CategoricalLayer):
             alpha=self.style.alpha,
             label=self.style.label,
             zorder=self.style.zorder,
-            linewidth=self.style.linewidth,
+            linewidth=self.style.edge_linewidth,
             edgecolor=self.style.edgecolor,
             hatch=self.style.hatch
         )

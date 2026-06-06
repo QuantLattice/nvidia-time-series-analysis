@@ -2,7 +2,8 @@
 Public API for the plotting contracts subsystem.
 
 This package defines the core abstractions, configuration objects,
-and type constraints used across the plotting framework.
+type constraints, and styling contracts used across the plotting
+framework.
 
 It serves as a stable interface boundary between:
 
@@ -25,7 +26,8 @@ Layer abstraction layer
     PlotLayer, LayerPlacement
 
 Styling layer
-    LayerStyle and specialized style variants for different plot types
+    LayerStyle and specialized style variants for line, scatter,
+    area, categorical, matrix, and financial plot types
 
 Type constraints layer
     Literal types defining Matplotlib-compatible styling options
@@ -58,7 +60,8 @@ from .layer_style import (
     BarStyle,
     BoxStyle,
     HistogramStyle,
-    HeatmapStyle
+    HeatmapStyle,
+    CandlestickStyle
 )
 from .types import (
     LineStyleLiteral,
@@ -85,6 +88,7 @@ __all__ = [
     "BoxStyle",
     "HistogramStyle",
     "HeatmapStyle",
+    "CandlestickStyle",
 
     "LineStyleLiteral",
     "MarkerStyle",

@@ -9,7 +9,7 @@ encapsulating both visualization data and rendering behavior.
 
 Architecture
 ------------
-The layer system is organized into multiple domains:
+The layer system is organized into multiple visualization domains:
 
 Base layers
     Abstract foundation classes defining rendering contracts and
@@ -24,7 +24,12 @@ Categorical layers
     and histograms.
 
 Matrix layers
-    Matrix-oriented visualizations such as heatmaps.
+    Matrix-oriented visualizations such as heatmaps and correlation
+    matrices.
+
+Financial layers
+    Financial market visualizations such as OHLC and candlestick
+    charts.
 
 Design goals
 ------------
@@ -59,6 +64,9 @@ from .categorical import (
 from .matrix import (
     HeatmapLayer
 )
+from .financial import (
+    CandlestickLayer
+)
 
 
 __all__ = [
@@ -74,5 +82,7 @@ __all__ = [
     "BoxLayer",
     "HistogramLayer",
 
-    "HeatmapLayer"
+    "HeatmapLayer",
+
+    "CandlestickLayer"
 ]

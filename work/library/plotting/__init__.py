@@ -18,8 +18,8 @@ Orchestration layer
 
 Layer system
     Composable visualization primitives defining rendering behavior
-    for different data domains, including numerical, categorical,
-    and matrix-based representations.
+    for multiple data domains, including numerical, categorical,
+    matrix-based, and financial visualizations.
 
 Configuration system
     ChartConfig, FigureConfig, and style objects controlling visual
@@ -59,7 +59,8 @@ from .contracts import (
     BarStyle,
     BoxStyle,
     HistogramStyle,
-    HeatmapStyle
+    HeatmapStyle,
+    CandlestickStyle
 )
 from .layers import (
     BaseLayer,
@@ -71,7 +72,8 @@ from .layers import (
     BarLayer,
     BoxLayer,
     HistogramLayer,
-    HeatmapLayer
+    HeatmapLayer,
+    CandlestickLayer
 )
 
 
@@ -90,6 +92,7 @@ __all__ = [
     "BoxStyle",
     "HistogramStyle",
     "HeatmapStyle",
+    "CandlestickStyle",
 
     "BaseLayer",
     "CategoricalLayer",
@@ -100,5 +103,6 @@ __all__ = [
     "BarLayer",
     "BoxLayer",
     "HistogramLayer",
-    "HeatmapLayer"
+    "HeatmapLayer",
+    "CandlestickLayer"
 ]
