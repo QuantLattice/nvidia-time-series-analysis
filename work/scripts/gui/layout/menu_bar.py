@@ -9,9 +9,11 @@ including file/help actions and right-side control buttons such as:
 
 
 from tkinter import ttk, Tk
-from typing import Callable
+from typing import Callable, Tuple
+import tkinter as tk
 
 from work.library.config import Config
+from work.scripts.gui.constants.scale import resolve_ui_scale
 from work.scripts.gui.factories import UIFactory
 from work.scripts.gui.theme import StyleName
 from work.scripts.gui.services import Translator, UISettings
@@ -54,8 +56,10 @@ class MenuBar(ttk.Frame):
         config: Config,
         ui_factory: UIFactory,
         on_toggle_panels: Callable[[], None],
+        on_import_csv: Callable[[], None],
+        on_export_csv: Callable[[], None],
         translator: Translator,
-        ui_settings: UISettings
+        ui_settings: UISettings,
     ) -> None:
         """
         Initialize the main application menu bar.
@@ -91,11 +95,14 @@ class MenuBar(ttk.Frame):
         self.config = config
         self.ui_factory = ui_factory
         self.on_toggle_panels = on_toggle_panels
+        self.on_import_csv = on_import_csv
+        self.on_export_csv = on_export_csv
         self.translator = translator
+        self.ui_settings = ui_settings
 
         self.settings_menu = SettingsMenu(
             parent=self,
-            ui_settings=ui_settings,
+            ui_settings=self.ui_settings,
             translator=translator,
             config=config
         )
@@ -116,12 +123,25 @@ class MenuBar(ttk.Frame):
 
         menu_bar = self.translator.get_data().menu_bar
 
-        self.ui_factory.text_button(
+        self.file_menu = tk.Menu(master=self, tearoff=0)
+        self.file_menu.add_command(
+            label=menu_bar.import_button_label,
+            command=self.on_import_csv,
+            font=self._get_font()
+        )
+        self.file_menu.add_command(
+            label=menu_bar.export_button_label,
+            command=self.on_export_csv,
+            font=self._get_font()
+        )
+
+        self.file_button = self.ui_factory.text_button(
             parent=left,
             text=menu_bar.file_button_text,
-            command=lambda: print("File"),
+            command=self._post_file_menu,
             style=StyleName.FLAT_BUTTON,
-        ).pack(side="left", fill="y")
+        )
+        self.file_button.pack(side="left", fill="y")
 
         self.ui_factory.text_button(
             parent=left,
@@ -134,7 +154,6 @@ class MenuBar(ttk.Frame):
         right.pack(side="right")
 
         assets = self.config.app.assets
-
         self.settings_button = self.ui_factory.icon_button(
             parent=right,
             icon_path=assets.settings_icon,
@@ -151,9 +170,29 @@ class MenuBar(ttk.Frame):
         )
         display_button.pack(side="right")
 
+    def _post_file_menu(self) -> None:
+        x = self.file_button.winfo_rootx()
+        y = self.file_button.winfo_rooty() + self.file_button.winfo_height()
+        self.file_menu.tk_popup(x, y)
+
     def _toggle_settings_menu(self) -> None:
         """
         Open or reposition the settings menu under its anchor button.
         """
 
         self.settings_menu.post_under(self.settings_button)
+
+    def _get_font(self) -> Tuple[str, int]:
+        """
+        Build the default UI font tuple.
+
+        Returns
+        -------
+        Tuple[str, int]
+            Font family and scaled font size.
+        """
+
+        ui = self.config.user.ui
+        scale = resolve_ui_scale(ui.scale)
+
+        return (ui.font_family, scale.font_size)

@@ -7,9 +7,11 @@ depending on the currently active application section.
 
 
 from tkinter import ttk, Tk
+from typing import Callable
 
 from work.scripts.core import AppState
 from work.scripts.gui.factories import UIFactory
+from work.scripts.gui.services.translator import Translator
 
 
 class ContextPanel(ttk.Frame):
@@ -32,7 +34,10 @@ class ContextPanel(ttk.Frame):
         self,
         parent: Tk,
         ui_factory: UIFactory,
-        app_state: AppState
+        app_state: AppState,
+        on_import_csv: Callable[[], None],
+        on_export_csv: Callable[[], None],
+        translator: Translator
     ) -> None:
         """
         Initialize the context panel.
@@ -53,6 +58,9 @@ class ContextPanel(ttk.Frame):
 
         self.ui_factory = ui_factory
         self.app_state = app_state
+        self.on_import_csv = on_import_csv
+        self.on_export_csv = on_export_csv
+        self.translator = translator
 
     def render(
         self,
@@ -82,18 +90,21 @@ class ContextPanel(ttk.Frame):
         Build data section controls.
         """
 
-        ttk.Label(self, text="Data controls").pack(anchor="w")
+        actions = ttk.Frame(self)
+        actions.pack(anchor="w")
+
+        data = self.translator.get_data().context_panel
 
         self.ui_factory.text_button(
-            parent=self,
-            text="Load CSV",
-            command=lambda: print("Load CSV")
+            parent=actions,
+            text=data.import_csv_text,
+            command=self.on_import_csv,
         ).pack(side="left", padx=5, pady=5)
 
         self.ui_factory.text_button(
-            parent=self,
-            text="Add record",
-            command=lambda: print("Add record")
+            parent=actions,
+            text=data.export_csv_text,
+            command=self.on_export_csv,
         ).pack(side="left", padx=5, pady=5)
 
     def _build_analysis(self) -> None:
@@ -161,12 +172,14 @@ class ContextPanel(ttk.Frame):
         Build reports section controls.
         """
 
+        data = self.translator.get_data().context_panel
+
         ttk.Label(master=self, text="Reports").pack(anchor="w")
 
         self.ui_factory.text_button(
             parent=self,
-            text="Export CSV",
-            command=lambda: print("Export CSV")
+            text=data.export_csv_text,
+            command=self.on_export_csv
         ).pack(side="left", padx=5, pady=5)
 
         self.ui_factory.text_button(

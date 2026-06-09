@@ -15,11 +15,16 @@ StockQuoteValidator
 """
 
 
-from .stock_quote_normalizer import StockQuoteNormalizer
-from .stock_quote_validator import StockQuoteValidator
+from .stock_quote_normalizer import (
+    StockQuoteNormalizer
+)
+from .stock_quote_validator import (
+    StockQuoteValidator
+)
 
 
 __all__ = [
     "StockQuoteNormalizer",
+
     "StockQuoteValidator",
 ]

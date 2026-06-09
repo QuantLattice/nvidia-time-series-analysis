@@ -128,6 +128,18 @@ class StockQuoteRepository:
     # READ
     # ============================================================
 
+    def count_all(self) -> int:
+        return self.session.query(StockQuote).count()
+
+    def get_page(self, offset: int, limit: int) -> list[StockQuote]:
+        return (
+            self.session.query(StockQuote)
+            .order_by(StockQuote.id.asc())
+            .offset(offset)
+            .limit(limit)
+            .all()
+        )
+
     def get_by_id(self, quote_id: int) -> Optional[StockQuote]:
         """Retrieve a stock quote by its primary key.
 

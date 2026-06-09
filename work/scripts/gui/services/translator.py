@@ -8,7 +8,14 @@ typed dataclass models for safe access by the GUI layer.
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Union
+from typing import (
+    Any,
+    Dict,
+    Union,
+    Iterable,
+    Tuple,
+    List,
+)
 
 from work.library.utils import load
 
@@ -34,6 +41,8 @@ class MenuBarKeys:
     help_button_text: str
     settings_button_tooltip: str
     display_button_tooltip: str
+    import_button_label: str
+    export_button_label: str
 
 
 @dataclass(slots=True)
@@ -205,6 +214,39 @@ class FontSelectorPopupKeys:
 
 
 @dataclass(slots=True)
+class DataDialogResponse:
+    title: str
+    message: str
+
+
+@dataclass(slots=True)
+class DataDialog:
+    title: str
+    filetypes: Iterable[Tuple[str, Union[str, List[str], Tuple[str, ...]]]]
+    success: DataDialogResponse
+    error: DataDialogResponse
+
+
+@dataclass(slots=True)
+class CSVDataDialog:
+    import_data: DataDialog
+    rows_imported_message: str
+    date_range_message: str
+
+    export_data: DataDialog
+    file_message: str
+    rows_exported_message: str
+
+    unknown_error_message: str
+
+
+@dataclass(slots=True)
+class ContextPanelKeys:
+    import_csv_text: str
+    export_csv_text: str
+
+
+@dataclass(slots=True)
 class TranslationKeys:
     """
     Complete set of localized GUI strings.
@@ -225,6 +267,8 @@ class TranslationKeys:
     tool_bar: ToolBarKeys
     settings_menu: SettingsMenuKeys
     font_selector_popup: FontSelectorPopupKeys
+    csv_data_dialog: CSVDataDialog
+    context_panel: ContextPanelKeys
 
 
 class Translator():
@@ -291,7 +335,50 @@ class Translator():
             ),
             font_selector_popup=FontSelectorPopupKeys(
                 **json_data["font_selector_popup"]
+            ),
+            csv_data_dialog=self._create_csv_data_dialog(
+                json_data=json_data
+            ),
+            context_panel=ContextPanelKeys(
+                **json_data["context_panel"]
             )
+        )
+
+    def _create_csv_data_dialog(
+        self,
+        json_data: Dict[Any, Any]
+    ) -> CSVDataDialog:
+        csv_data = json_data["csv_data_dialog"]
+
+        import_data = csv_data["import_data"]
+        export_data = csv_data["export_data"]
+
+        return CSVDataDialog(
+            import_data=DataDialog(
+                title=import_data["title"],
+                filetypes=import_data["filetypes"],
+                success=DataDialogResponse(
+                    **import_data["success"]
+                ),
+                error=DataDialogResponse(
+                    **import_data["error"]
+                )
+            ),
+            rows_imported_message=csv_data["rows_imported_message"],
+            date_range_message=csv_data["date_range_message"],
+            export_data=DataDialog(
+                title=export_data["title"],
+                filetypes=export_data["filetypes"],
+                success=DataDialogResponse(
+                    **export_data["success"]
+                ),
+                error=DataDialogResponse(
+                    **export_data["error"]
+                )
+            ),
+            file_message=csv_data["file_message"],
+            rows_exported_message=csv_data["rows_exported_message"],
+            unknown_error_message=csv_data["unknown_error_message"]
         )
 
     def set_language(
