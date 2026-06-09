@@ -3,7 +3,9 @@
         "file_button_text": "File",
         "help_button_text": "Help",
         "settings_button_tooltip": "Settings",
-        "display_button_tooltip": "Display panels"
+        "display_button_tooltip": "Display panels",
+        "import_button_label": "Import CSV",
+        "export_button_label": "Export CSV"
     },
     "toolbar": {
         "data_button_tooltip": "Data",
@@ -43,5 +45,58 @@
         "title": "Select Font",
         "example_text": "The quick brown fox jumps over the lazy dog",
         "apply_button_text": "Apply"
+    },
+    "csv_data_dialog": {
+        "import_data": {
+            "title": "Import CSV",
+            "filetypes": [
+                [
+                    "CSV files",
+                    "*.csv"
+                ],
+                [
+                    "All files",
+                    "*."
+                ]
+            ],
+            "success": {
+                "title": "Import completed",
+                "message": "Imported successfully"
+            },
+            "error": {
+                "title": "Import failed",
+                "message": "Missing data in response"
+            }
+        },
+        "rows_imported_message": "Rows imported",
+        "date_range_message": "Date range",
+        "export_data": {
+            "title": "Export CSV",
+            "filetypes": [
+                [
+                    "CSV files",
+                    "*.csv"
+                ],
+                [
+                    "All files",
+                    "*."
+                ]
+            ],
+            "success": {
+                "title": "Export completed",
+                "message": "Exported successfully"
+            },
+            "error": {
+                "title": "Export failed",
+                "message": "Missing data in response"
+            }
+        },
+        "file_message": "File",
+        "rows_exported_message": "Rows exported",
+        "unknown_error_message": "Unknown error"
+    },
+    "context_panel": {
+        "import_csv_text": "Import CSV",
+        "export_csv_text": "Export CSV"
     }
 }

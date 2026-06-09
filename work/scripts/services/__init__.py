@@ -14,17 +14,17 @@ Components
 StockQuoteService
     Core service for CRUD operations on stock quotes.
 
-CSVImportService
-    Service responsible for importing and validating stock quote data
-    from CSV files into the database.
+CSVService
+    Service responsible for importing, validating and exporting
+    stock quote data from CSV files into the database.
 """
 
 
 from .stock_quote_service import StockQuoteService
-from .csv_import_service import CSVImportService
+from .csv_service import CSVService
 
 
 __all__ = [
     "StockQuoteService",
-    "CSVImportService",
+    "CSVService",
 ]

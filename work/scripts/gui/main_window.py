@@ -8,10 +8,16 @@ toolbar, context panel, content area, and layout orchestration.
 
 import tkinter as tk
 import os
+from typing import Dict
 
 from work.scripts.core import AppState
 from work.library.config import Config
-from work.scripts.gui.services import UISettings, Translator
+from work.scripts.gui.services import (
+    UISettings,
+    Translator,
+    DataDialogService,
+    CSVResultHandler
+)
 from work.scripts.gui.factories import UIFactory
 from work.scripts.gui.constants import (
     MAIN_WINDOW_SIZE
@@ -24,6 +30,11 @@ from work.scripts.gui.layout import (
     ContextPanel,
     MenuBar,
     ContentArea
+)
+
+from work.scripts.controllers import (
+    CSVController,
+    StockQuoteController
 )
 
 
@@ -59,7 +70,9 @@ class MainWindow:
         app_state: AppState,
         ui_factory: UIFactory,
         ui_settings: UISettings,
-        translator: Translator
+        translator: Translator,
+        csv_controller: CSVController,
+        stock_quote_controller: StockQuoteController
     ) -> None:
         """
         Initialize and build the main application window.
@@ -91,6 +104,14 @@ class MainWindow:
         self.ui_factory = ui_factory
         self.ui_settings = ui_settings
         self.translator = translator
+        self.csv_controller = csv_controller
+        self.stock_quote_controller = stock_quote_controller
+
+        self.data_dialog = DataDialogService(
+            root=root,
+            translator=self.translator
+        )
+        self.csv_result_handler = CSVResultHandler()
 
         self._configure_root()
         self._build_layout()
@@ -118,7 +139,7 @@ class MainWindow:
         )
 
         if ui.maximized:
-            self.root.after(0, lambda: self.root.state("zoomed"))
+            self.root.after(ms=0, func=lambda: self.root.state("zoomed"))
 
         self.root.minsize(*MAIN_WINDOW_SIZE)
 
@@ -150,8 +171,10 @@ class MainWindow:
             config=self.config,
             ui_factory=self.ui_factory,
             on_toggle_panels=self.toggle_panels,
+            on_import_csv=self._import_csv,
+            on_export_csv=self._export_csv,
             translator=self.translator,
-            ui_settings=self.ui_settings
+            ui_settings=self.ui_settings,
         )
 
         self.toolbar = ToolBar(
@@ -165,12 +188,14 @@ class MainWindow:
         self.context_panel = ContextPanel(
             parent=self.root,
             ui_factory=self.ui_factory,
-            app_state=self.app_state
+            app_state=self.app_state,
+            on_import_csv=self._import_csv,
+            on_export_csv=self._export_csv,
+            translator=self.translator
         )
 
-        self.content_area = ContentArea(
-            parent=self.root
-        )
+        self.content_area = ContentArea(parent=self.root)
+        self.content_area.set_loader(self._load_quotes_page)
         self.content_area.set_placeholder(text="MAIN CONTENT")
 
         self.layout = LayoutManager(root=self.root)
@@ -200,30 +225,83 @@ class MainWindow:
     # LOGIC
     # ---------------------------
 
+    def _load_quotes_page(
+        self,
+        page: int,
+        page_size: int
+    ) -> Dict[str, object]:
+        return self.stock_quote_controller.get_quotes_page(
+            page=page,
+            page_size=page_size,
+        )
+
+    def _import_csv(self) -> None:
+        path = self.data_dialog.ask_csv_to_import()
+        if path is None:
+            return
+
+        result = self.csv_controller.import_csv(str(path))
+        self.csv_result_handler.show_import_result(result, self.data_dialog)
+
+    def _export_csv(self) -> None:
+        path = self.data_dialog.ask_csv_to_export()
+        if path is None:
+            return
+
+        result = self.csv_controller.export_csv(str(path))
+        self.csv_result_handler.show_export_result(result, self.data_dialog)
+
     def on_section_click(
         self,
         section: str
     ) -> None:
-        """
-        Handle toolbar section selection.
-
-        Parameters
-        ----------
-        section : str
-            Selected application section.
-        """
-
         ui_state = self.app_state.ui_state
 
         if ui_state.active_section == section:
             ui_state.active_section = None
+
             self.layout.hide(name=LayoutKey.CONTEXT)
+
+            self.content_area.clear()
+            self.content_area.set_placeholder("MAIN CONTENT")
+
             return
 
         ui_state.active_section = section
+
         self.context_panel.render(section=section)
 
         self.layout.show(name=LayoutKey.CONTEXT)
+
+        self._render_content(section)
+
+    def _render_content(
+        self,
+        section: str
+    ) -> None:
+
+        if section == "data":
+            self._render_data_content()
+
+        elif section == "analysis":
+            self.content_area.set_placeholder(
+                "Analysis tools"
+            )
+
+        elif section == "reports":
+            self.content_area.set_placeholder(
+                "Reports"
+            )
+
+    def _render_data_content(self) -> None:
+        self.content_area.set_loader(
+            self.stock_quote_controller.get_quotes_page
+        )
+
+        self.content_area.show_quotes(
+            page=1,
+            page_size=100,
+        )
 
     def toggle_panels(self) -> None:
         """
