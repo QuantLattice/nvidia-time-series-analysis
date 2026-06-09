@@ -27,7 +27,7 @@ from work.scripts.dto import (
 )
 
 from datetime import date
-from typing import Optional, List
+from typing import Optional, List, Tuple
 
 
 class StockQuoteService:
@@ -184,6 +184,21 @@ class StockQuoteService:
     # ============================================================
     # READ
     # ============================================================
+
+    def get_quotes_page(
+        self,
+        page: int,
+        page_size: int
+    ) -> Tuple[List[StockQuoteDTO], int]:
+        offset = (page - 1) * page_size
+
+        with self.db.session() as session:
+            repo = StockQuoteRepository(session=session)
+            total = repo.count_all()
+            quotes = repo.get_page(offset=offset, limit=page_size)
+            return [
+                self._to_dto(entity=q) for q in quotes
+            ], total
 
     def get_quote_by_id(self, quote_id: int) -> Optional[StockQuoteDTO]:
         """Retrieve a stock quote by identifier.

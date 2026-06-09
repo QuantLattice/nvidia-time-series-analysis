@@ -6,7 +6,9 @@ into the internal contract schema used by downstream processing.
 """
 
 
-from .stock_quote_mapper import StockQuoteMapper
+from .stock_quote_mapper import (
+    StockQuoteMapper
+)
 
 
 __all__ = [

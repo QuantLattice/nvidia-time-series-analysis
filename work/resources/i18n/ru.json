@@ -3,7 +3,9 @@
         "file_button_text": "Файл",
         "help_button_text": "Справка",
         "settings_button_tooltip": "Настройки",
-        "display_button_tooltip": "Отображение панелей"
+        "display_button_tooltip": "Отображение панелей",
+        "import_button_label": "Импорт CSV",
+        "export_button_label": "Экспорт CSV"
     },
     "toolbar": {
         "data_button_tooltip": "Данные",
@@ -43,5 +45,58 @@
         "title": "Выбрать Шрифт",
         "example_text": "Съешь ещё этих мягких французских булок да выпей чаю",
         "apply_button_text": "Применить"
+    },
+    "csv_data_dialog": {
+        "import_data": {
+            "title": "Импорт CSV",
+            "filetypes": [
+                [
+                    "CSV Файлы",
+                    "*.csv"
+                ],
+                [
+                    "Все файлы",
+                    "*."
+                ]
+            ],
+            "success": {
+                "title": "Импорт завершён",
+                "message": "Успешно импортировано"
+            },
+            "error": {
+                "title": "Ошибка импорта",
+                "message": "Отсутствуют данные в ответе"
+            }
+        },
+        "rows_imported_message": "Строк импортировано",
+        "date_range_message": "Диапазон дат",
+        "export_data": {
+            "title": "Экспорт CSV",
+            "filetypes": [
+                [
+                    "CSV файлы",
+                    "*.csv"
+                ],
+                [
+                    "Все файлы",
+                    "*."
+                ]
+            ],
+            "success": {
+                "title": "Экспорт завершён",
+                "message": "Успешно экспортровано"
+            },
+            "error": {
+                "title": "Ошибка экспорта",
+                "message": "Отсутствуют данные в ответе"
+            }
+        },
+        "file_message": "Файл",
+        "rows_exported_message": "Строк экспортровано",
+        "unknown_error_message": "Неизвестная ошибка"
+    },
+    "context_panel": {
+        "import_csv_text": "Импорт CSV",
+        "export_csv_text": "Экспорт CSV"
     }
 }

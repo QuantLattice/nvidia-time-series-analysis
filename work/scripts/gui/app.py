@@ -21,6 +21,16 @@ from work.scripts.gui.services import (
 from work.scripts.gui.factories import UIFactory
 from work.scripts.gui.main_window import MainWindow
 
+from work.scripts.db import Database
+from work.scripts.services import (
+    StockQuoteService,
+    CSVService
+)
+from work.scripts.controllers import (
+    CSVController,
+    StockQuoteController
+)
+
 
 class App():
     """
@@ -83,13 +93,23 @@ class App():
             translator=self.translator
         )
 
+        self.db = Database()
+        self.stock_quote_service = StockQuoteService(db=self.db)
+        self.stock_quote_controller = StockQuoteController(
+            service=self.stock_quote_service
+        )
+        self.csv_service = CSVService(stock_service=self.stock_quote_service)
+        self.csv_controller = CSVController(service=self.csv_service)
+
         self.main_window = MainWindow(
             root=self.root,
             config=self.config,
             app_state=self.app_state,
             ui_factory=self.ui_factory,
             ui_settings=self.ui_settings,
-            translator=self.translator
+            translator=self.translator,
+            csv_controller=self.csv_controller,
+            stock_quote_controller=self.stock_quote_controller
         )
 
     def _on_close(self):

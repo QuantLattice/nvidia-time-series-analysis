@@ -202,6 +202,18 @@ class StockQuoteController:
     # READ
     # ============================================================
 
+    def get_quotes_page(
+        self,
+        page: int,
+        page_size: int = 100
+    ) -> Dict[str, Any]:
+        return self._handle(
+            func=lambda: self._get_page(
+                page=page,
+                page_size=page_size
+            )
+        )
+
     def get_quote_by_id(self, quote_id: Union[int, str]) -> Dict[str, Any]:
         """Retrieve a single stock quote by ID.
 
@@ -218,6 +230,29 @@ class StockQuoteController:
         return self._handle(
             lambda: self._get_one(self._parse_id(quote_id))
         )
+
+    def _get_page(
+        self,
+        page: int,
+        page_size: int
+    ) -> Dict[str, Any]:
+        if page <= 0:
+            raise ValueError('page must be positive')
+        if page_size <= 0:
+            raise ValueError('page_size must be positive')
+
+        quotes, total = self.service.get_quotes_page(
+            page=page,
+            page_size=page_size
+        )
+
+        return {
+            'items': [self._to_dict(q) for q in quotes],
+            'page': page,
+            'page_size': page_size,
+            'total_rows': total,
+            'total_pages': max(1, (total + page_size - 1) // page_size),
+        }
 
     def _get_one(self, quote_id: int) -> Dict[str, Any]:
         """Internal retrieval of a single stock quote.
