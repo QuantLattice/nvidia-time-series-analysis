@@ -8,7 +8,9 @@ toolbar, context panel, content area, and layout orchestration.
 
 import tkinter as tk
 import os
-from typing import Dict
+import datetime
+from datetime import date
+from typing import Dict, List, Any
 
 from work.scripts.core import AppState
 from work.library.config import Config
@@ -34,7 +36,8 @@ from work.scripts.gui.layout import (
 
 from work.scripts.controllers import (
     CSVController,
-    StockQuoteController
+    StockQuoteController,
+    ReportController,
 )
 
 
@@ -72,7 +75,8 @@ class MainWindow:
         ui_settings: UISettings,
         translator: Translator,
         csv_controller: CSVController,
-        stock_quote_controller: StockQuoteController
+        stock_quote_controller: StockQuoteController,
+        report_controller: ReportController,
     ) -> None:
         """
         Initialize and build the main application window.
@@ -96,6 +100,9 @@ class MainWindow:
 
         translator : Translator
             Localization service used for UI text.
+
+        report_controller : ReportController
+            Controller for generating and exporting TXT reports.
         """
 
         self.root = root
@@ -106,6 +113,7 @@ class MainWindow:
         self.translator = translator
         self.csv_controller = csv_controller
         self.stock_quote_controller = stock_quote_controller
+        self.report_controller = report_controller
 
         self.data_dialog = DataDialogService(
             root=root,
@@ -191,6 +199,8 @@ class MainWindow:
             app_state=self.app_state,
             on_import_csv=self._import_csv,
             on_export_csv=self._export_csv,
+            on_run_analysis=self._on_run_analysis,
+            on_export_txt=self._export_txt,
             translator=self.translator
         )
 
@@ -251,6 +261,23 @@ class MainWindow:
         result = self.csv_controller.export_csv(str(path))
         self.csv_result_handler.show_export_result(result, self.data_dialog)
 
+    def _export_txt(self) -> None:
+        path = self.data_dialog.ask_txt_to_export()
+        if path is None:
+            return
+
+        result = self.report_controller.export_txt(str(path))
+        if result["success"]:
+            self.data_dialog.show_info(
+                title="Export TXT",
+                message=f"Report saved:\n{path}",
+            )
+        else:
+            self.data_dialog.show_error(
+                title="Export TXT — Error",
+                message=result["error"] or "Unknown error",
+            )
+
     def on_section_click(
         self,
         section: str
@@ -285,7 +312,7 @@ class MainWindow:
 
         elif section == "analysis":
             self.content_area.set_placeholder(
-                "Analysis tools"
+                "Select date range and chart type, then click Plot."
             )
 
         elif section == "reports":
@@ -302,6 +329,150 @@ class MainWindow:
             page=1,
             page_size=100,
         )
+
+    def _on_run_analysis(
+        self,
+        start_date: date,
+        end_date: date,
+        chart_type: str,
+    ) -> None:
+        """Fetch data, build the requested chart, and display it."""
+
+        result = self.stock_quote_controller.get_quotes_by_date_range(
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+        if not result["success"]:
+            self.content_area.set_placeholder(f"Error: {result['error']}")
+            return
+
+        quotes: List[Any] = result["data"]
+
+        if not quotes:
+            self.content_area.set_placeholder(
+                "No data found for the selected date range."
+            )
+            return
+
+        fig = self._build_figure(quotes, chart_type, start_date, end_date)
+        self.content_area.show_chart(fig)
+
+    def _build_figure(
+        self,
+        quotes: List[Any],
+        chart_type: str,
+        start_date: date,
+        end_date: date,
+    ):
+        """Build a Matplotlib Figure from the given quotes and chart type."""
+
+        from matplotlib.figure import Figure
+        from work.library.plotting.rendering import MatplotlibRenderer
+        from work.library.plotting.contracts import PlotContext, ChartConfig
+        from work.library.plotting.stack import LayerStack
+        from work.library.plotting.layers import (
+            CandlestickLayer,
+            LineLayer,
+            ScatterLayer,
+            BoxLayer,
+            HistogramLayer,
+        )
+        from work.library.plotting.contracts import (
+            LineStyle,
+            ScatterStyle,
+            BoxStyle,
+            HistogramStyle,
+        )
+
+        # Convert trade_date strings/dates to datetime for matplotlib
+        dates = [
+            datetime.datetime.combine(
+                datetime.date.fromisoformat(q["trade_date"])
+                if isinstance(q["trade_date"], str)
+                else q["trade_date"],
+                datetime.time(),
+            )
+            for q in quotes
+        ]
+        closes = [q["close_price"] for q in quotes]
+
+        fig = Figure(figsize=(10, 5))
+        ax = fig.add_subplot(111)
+
+        context = PlotContext(figure=fig, primary_axes=ax)
+        stack = LayerStack()
+
+        if chart_type == "candlestick":
+            opens = [q["open_price"] for q in quotes]
+            highs = [q["high_price"] for q in quotes]
+            lows = [q["low_price"] for q in quotes]
+            n = len(dates)
+            if n > 1:
+                span = (dates[-1] - dates[0]).days or n
+                width = (span / n) * 0.8
+            else:
+                width = 0.6
+            layer = CandlestickLayer(
+                x=dates, open=opens, high=highs, low=lows, close=closes,
+                width=width,
+            )
+        elif chart_type == "line":
+            layer = LineLayer(
+                x=dates, y=closes,
+                style=LineStyle(label="Close price"),
+            )
+        elif chart_type == "scatter":
+            layer = ScatterLayer(
+                x=dates, y=closes,
+                style=ScatterStyle(label="Close price"),
+            )
+        elif chart_type == "box":
+            layer = BoxLayer(
+                values=closes,
+                style=BoxStyle(label="Close price"),
+            )
+        else:
+            layer = HistogramLayer(
+                values=closes,
+                style=HistogramStyle(label="Close price"),
+            )
+
+        stack.add_layer(layer)
+
+        title_map = {
+            "candlestick": "Candlestick chart",
+            "line": "Close price — line",
+            "scatter": "Close price — scatter",
+            "box": "Price distribution — box",
+            "histogram": "Price distribution — histogram",
+        }
+        xlabel_map = {
+            "candlestick": "Date",
+            "line": "Date",
+            "scatter": "Date",
+            "box": "Close price (USD)",
+            "histogram": "Close price (USD)",
+        }
+        ylabel_map = {
+            "candlestick": "Price (USD)",
+            "line": "Price (USD)",
+            "scatter": "Price (USD)",
+            "box": "Price (USD)",
+            "histogram": "Frequency",
+        }
+
+        chart_config = ChartConfig(
+            title=f"{title_map.get(chart_type, chart_type)}  |  {start_date} — {end_date}",
+            xlabel=xlabel_map.get(chart_type, "Date"),
+            primary_ylabel=ylabel_map.get(chart_type, "Price (USD)"),
+        )
+
+        renderer = MatplotlibRenderer()
+        renderer.render(stack=stack, context=context, chart_config=chart_config)
+        fig.tight_layout()
+
+        return fig
 
     def toggle_panels(self) -> None:
         """

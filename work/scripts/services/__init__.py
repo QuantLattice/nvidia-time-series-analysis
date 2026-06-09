@@ -22,9 +22,11 @@ CSVService
 
 from .stock_quote_service import StockQuoteService
 from .csv_service import CSVService
+from .report_formatter import ReportFormatter
 
 
 __all__ = [
     "StockQuoteService",
     "CSVService",
+    "ReportFormatter",
 ]

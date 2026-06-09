@@ -40,6 +40,18 @@ class DataDialogService:
 
         return Path(path) if path else None
 
+    def ask_txt_to_export(self) -> Optional[Path]:
+        path = filedialog.asksaveasfilename(
+            parent=self.root,
+            title="Export TXT Report",
+            defaultextension=".txt",
+            filetypes=[
+                ("Text files", "*.txt"),
+                ("All files", "*.*"),
+            ],
+        )
+        return Path(path) if path else None
+
     def show_error(
         self,
         title: str,

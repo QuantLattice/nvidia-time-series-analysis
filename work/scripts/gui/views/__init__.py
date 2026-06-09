@@ -7,8 +7,10 @@ from menus, buttons, and other interactive GUI elements.
 
 
 from .settings_menu import SettingsMenu
+from .calendar_popup import CalendarPopup
 
 
 __all__ = [
-    "SettingsMenu"
+    "SettingsMenu",
+    "CalendarPopup",
 ]

@@ -10,6 +10,8 @@ active application section.
 from tkinter import ttk, Tk
 from typing import Any, Callable, Dict, List
 
+from matplotlib.figure import Figure
+
 
 class ContentArea(ttk.Frame):
     """
@@ -191,6 +193,42 @@ class ContentArea(ttk.Frame):
         if self._page > 1:
             self._page -= 1
             self._reload()
+
+    def show_chart(self, figure: Figure) -> None:
+        """
+        Embed a Matplotlib figure in the content area.
+
+        Replaces any existing content with a FigureCanvasTkAgg canvas
+        and the standard navigation toolbar (zoom, pan, save, etc.).
+
+        Parameters
+        ----------
+        figure : Figure
+            Rendered Matplotlib figure to display.
+        """
+
+        from matplotlib.backends.backend_tkagg import (
+            FigureCanvasTkAgg,
+            NavigationToolbar2Tk,
+        )
+
+        self.clear()
+
+        canvas = FigureCanvasTkAgg(figure, master=self)
+        canvas.draw()
+
+        # toolbar must be created AFTER canvas.draw(); keep a ref so GC won't collect it
+        toolbar_frame = ttk.Frame(self)
+        toolbar_frame.grid(row=0, column=0, sticky="ew")
+
+        self._toolbar = NavigationToolbar2Tk(canvas, toolbar_frame, pack_toolbar=True)
+        self._toolbar.update()
+
+        canvas.get_tk_widget().grid(row=1, column=0, sticky="nsew")
+
+        self.columnconfigure(0, weight=1)
+        self.rowconfigure(0, weight=0)
+        self.rowconfigure(1, weight=1)
 
     def clear(self) -> None:
         for widget in self.winfo_children():

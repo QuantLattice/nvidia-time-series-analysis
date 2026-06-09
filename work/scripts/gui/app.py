@@ -28,7 +28,8 @@ from work.scripts.services import (
 )
 from work.scripts.controllers import (
     CSVController,
-    StockQuoteController
+    StockQuoteController,
+    ReportController,
 )
 
 
@@ -100,6 +101,7 @@ class App():
         )
         self.csv_service = CSVService(stock_service=self.stock_quote_service)
         self.csv_controller = CSVController(service=self.csv_service)
+        self.report_controller = ReportController(service=self.stock_quote_service)
 
         self.main_window = MainWindow(
             root=self.root,
@@ -109,7 +111,8 @@ class App():
             ui_settings=self.ui_settings,
             translator=self.translator,
             csv_controller=self.csv_controller,
-            stock_quote_controller=self.stock_quote_controller
+            stock_quote_controller=self.stock_quote_controller,
+            report_controller=self.report_controller,
         )
 
     def _on_close(self):

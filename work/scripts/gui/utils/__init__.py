@@ -8,8 +8,10 @@ widget helpers, and reusable UI behaviors.
 
 
 from .tooltip import ToolTip
+from .date_entry import DatePickerEntry
 
 
 __all__ = [
     "ToolTip",
+    "DatePickerEntry",
 ]

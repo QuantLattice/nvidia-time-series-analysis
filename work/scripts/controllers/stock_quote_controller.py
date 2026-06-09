@@ -13,6 +13,8 @@ predictable API.
 """
 
 
+from datetime import date
+
 from work.scripts.services import StockQuoteService
 from work.scripts.dto import (
     StockQuoteCreateDTO,
@@ -277,6 +279,40 @@ class StockQuoteController:
             raise ValueError("Stock quote not found")
 
         return self._to_dict(result)
+
+    def get_quotes_by_date_range(
+        self,
+        start_date: date,
+        end_date: date,
+    ) -> Dict[str, Any]:
+        """Retrieve stock quotes within a date range.
+
+        Parameters
+        ----------
+        start_date : date
+            Start of the range (inclusive).
+        end_date : date
+            End of the range (inclusive).
+
+        Returns
+        -------
+        dict[str, Any]
+            Standardized response containing a list of quote dicts.
+        """
+
+        return self._handle(
+            lambda: self._get_by_date_range(start_date, end_date)
+        )
+
+    def _get_by_date_range(
+        self,
+        start_date: date,
+        end_date: date,
+    ) -> List[Dict[str, Any]]:
+        return [
+            self._to_dict(q)
+            for q in self.service.get_quotes_by_date_range(start_date, end_date)
+        ]
 
     def get_all_quotes(self) -> Dict[str, Any]:
         """Retrieve all stock quotes.
