@@ -56,12 +56,15 @@ class ToolBarKeys:
         Tooltip text for the Data toolbar button.
     analysis_button_tooltip : str
         Tooltip text for the Analysis toolbar button.
+    features_button_tooltip : str
+        Tooltip text for the Features toolbar button.
     reports_button_tooltip : str
         Tooltip text for the Reports toolbar button.
     """
 
     data_button_tooltip: str
     analysis_button_tooltip: str
+    features_button_tooltip: str
     reports_button_tooltip: str
 
 

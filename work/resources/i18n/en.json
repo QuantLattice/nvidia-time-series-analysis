@@ -10,6 +10,7 @@
     "toolbar": {
         "data_button_tooltip": "Data",
         "analysis_button_tooltip": "Analysis",
+        "features_button_tooltip": "Features",
         "reports_button_tooltip": "Reports"
     },
     "settings_menu": {

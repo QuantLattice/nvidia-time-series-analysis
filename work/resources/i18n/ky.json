@@ -8,6 +8,7 @@
     "toolbar": {
         "data_button_tooltip": "Маалыматтар",
         "analysis_button_tooltip": "Талдоо",
+        "features_button_tooltip": "Белгилер",
         "reports_button_tooltip": "Отчёттор"
     },
     "settings_menu": {

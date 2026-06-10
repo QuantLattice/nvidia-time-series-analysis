@@ -10,7 +10,7 @@ import tkinter as tk
 import os
 import datetime
 from datetime import date
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional
 
 from work.scripts.core import AppState
 from work.library.config import Config
@@ -120,6 +120,7 @@ class MainWindow:
             translator=self.translator
         )
         self.csv_result_handler = CSVResultHandler()
+        self._features_df = None
 
         self._configure_root()
         self._build_layout()
@@ -201,6 +202,8 @@ class MainWindow:
             on_export_csv=self._export_csv,
             on_run_analysis=self._on_run_analysis,
             on_export_txt=self._export_txt,
+            on_generate_features=self._on_generate_features,
+            on_plot_features=self._on_plot_features,
             translator=self.translator
         )
 
@@ -313,6 +316,11 @@ class MainWindow:
         elif section == "analysis":
             self.content_area.set_placeholder(
                 "Select date range and chart type, then click Plot."
+            )
+
+        elif section == "features":
+            self.content_area.set_placeholder(
+                "Select a generator and date range, then click Generate."
             )
 
         elif section == "reports":
@@ -466,6 +474,113 @@ class MainWindow:
             title=f"{title_map.get(chart_type, chart_type)}  |  {start_date} — {end_date}",
             xlabel=xlabel_map.get(chart_type, "Date"),
             primary_ylabel=ylabel_map.get(chart_type, "Price (USD)"),
+        )
+
+        renderer = MatplotlibRenderer()
+        renderer.render(stack=stack, context=context, chart_config=chart_config)
+        fig.tight_layout()
+
+        return fig
+
+    def _on_generate_features(
+        self,
+        generator_type: str,
+        start_date: date,
+        end_date: date,
+    ) -> Optional[List[str]]:
+        """Fetch quotes, run the selected feature generator, return numeric column names."""
+
+        result = self.stock_quote_controller.get_quotes_by_date_range(
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+        if not result["success"]:
+            self.content_area.set_placeholder(f"Error: {result['error']}")
+            return None
+
+        quotes: List[Any] = result["data"]
+
+        if not quotes:
+            self.content_area.set_placeholder(
+                "No data found for the selected date range."
+            )
+            return None
+
+        import pandas as pd
+        from work.scripts.analytics.features import (
+            MovingAverageFeatureGenerator,
+            ReturnsFeatureGenerator,
+            TechnicalIndicatorsFeatureGenerator,
+        )
+
+        df = pd.DataFrame(quotes)
+        df["trade_date"] = pd.to_datetime(df["trade_date"])
+        df = df.sort_values("trade_date").set_index("trade_date")
+
+        try:
+            if generator_type == "Moving Averages":
+                gen = MovingAverageFeatureGenerator()
+                df = gen.apply(df, price_column="close_price", volume_column="volume")
+            elif generator_type == "Returns":
+                gen = ReturnsFeatureGenerator()
+                df = gen.apply(df, price_column="close_price")
+            elif generator_type == "Technical Indicators":
+                gen = TechnicalIndicatorsFeatureGenerator()
+                df = gen.apply(df, price_column="close_price")
+        except Exception as e:
+            self.content_area.set_placeholder(f"Feature generation error: {e}")
+            return None
+
+        self._features_df = df
+
+        exclude = {"id"}
+        return [
+            c for c in df.select_dtypes(include="number").columns
+            if c not in exclude
+        ]
+
+    def _on_plot_features(self, selected_columns: List[str]) -> None:
+        """Build a multi-line chart for the selected feature columns."""
+
+        if self._features_df is None:
+            return
+
+        fig = self._build_feature_figure(self._features_df, selected_columns)
+        self.content_area.show_chart(fig)
+
+    def _build_feature_figure(self, df, selected_columns: List[str]):
+        """Build a Matplotlib Figure with one line per selected column."""
+
+        from matplotlib.figure import Figure
+        from work.library.plotting.rendering import MatplotlibRenderer
+        from work.library.plotting.contracts import PlotContext, ChartConfig
+        from work.library.plotting.stack import LayerStack
+        from work.library.plotting.layers import LineLayer
+        from work.library.plotting.contracts import LineStyle
+
+        fig = Figure(figsize=(10, 5))
+        ax = fig.add_subplot(111)
+
+        context = PlotContext(figure=fig, primary_axes=ax)
+        stack = LayerStack()
+
+        dates = df.index.to_pydatetime()
+
+        for col in selected_columns:
+            if col not in df.columns:
+                continue
+            values = df[col].ffill().tolist()
+            stack.add_layer(LineLayer(
+                x=dates,
+                y=values,
+                style=LineStyle(label=col),
+            ))
+
+        chart_config = ChartConfig(
+            title=f"Features: {', '.join(selected_columns)}",
+            xlabel="Date",
+            primary_ylabel="Value",
         )
 
         renderer = MatplotlibRenderer()

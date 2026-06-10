@@ -8,6 +8,7 @@
     "toolbar": {
         "data_button_tooltip": "Dados",
         "analysis_button_tooltip": "Análise",
+        "features_button_tooltip": "Funcionalidades",
         "reports_button_tooltip": "Relatórios"
     },
     "settings_menu": {

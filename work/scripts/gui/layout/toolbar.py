@@ -89,6 +89,10 @@ class ToolBar(ttk.Frame):
                 toolbar.analysis_button_tooltip,
                 assets.analysis_icon
             ),
+            "features": (
+                toolbar.features_button_tooltip,
+                assets.analysis_icon
+            ),
             "reports": (toolbar.reports_button_tooltip, assets.reports_icon),
         }
 
