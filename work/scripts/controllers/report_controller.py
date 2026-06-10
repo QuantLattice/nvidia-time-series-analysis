@@ -53,7 +53,7 @@ class ReportController:
         df = self.service.get_all_quotes_df()
 
         if df.empty:
-            raise ValueError("No data in the database — import a CSV first.")
+            raise ValueError("Нет данных в базе — сначала импортируйте CSV.")
 
         eda_result = self._eda.generate(df)
         ts_result = self._ts.generate(df)
