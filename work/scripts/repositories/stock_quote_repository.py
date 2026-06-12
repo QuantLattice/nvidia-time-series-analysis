@@ -21,12 +21,13 @@ Notes
 """
 
 
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from work.scripts.db.models import StockQuote
 
 from datetime import date
-from typing import Optional, List
+from typing import Optional, List, Tuple
 
 
 class StockQuoteRepository:
@@ -124,6 +125,11 @@ class StockQuoteRepository:
 
         self.session.delete(quote)
 
+    def delete_all(self) -> None:
+        """Delete all stock quote records."""
+
+        self.session.query(StockQuote).delete(synchronize_session=False)
+
     # ============================================================
     # READ
     # ============================================================
@@ -131,10 +137,18 @@ class StockQuoteRepository:
     def count_all(self) -> int:
         return self.session.query(StockQuote).count()
 
-    def get_page(self, offset: int, limit: int) -> list[StockQuote]:
+    def get_page(
+        self,
+        offset: int,
+        limit: int,
+        sort_col: str = 'trade_date',
+        sort_desc: bool = False,
+    ) -> list[StockQuote]:
+        col = getattr(StockQuote, sort_col, StockQuote.trade_date)
+        order = col.desc() if sort_desc else col.asc()
         return (
             self.session.query(StockQuote)
-            .order_by(StockQuote.id.asc())
+            .order_by(order)
             .offset(offset)
             .limit(limit)
             .all()
@@ -170,7 +184,7 @@ class StockQuoteRepository:
     def get_by_date_range(
         self,
         start_date: date,
-        end_date: date
+        end_date: date,
     ) -> List[StockQuote]:
         """Retrieve stock quotes within a date range.
 
@@ -190,5 +204,15 @@ class StockQuoteRepository:
         return (
             self.session.query(StockQuote)
             .filter(StockQuote.trade_date.between(start_date, end_date))
+            .order_by(StockQuote.trade_date.asc())
             .all()
         )
+
+    def get_date_range(self) -> Tuple[Optional[date], Optional[date]]:
+        """Return (min_date, max_date) of all stored quotes, or (None, None) if empty."""
+
+        min_date, max_date = self.session.query(
+            func.min(StockQuote.trade_date),
+            func.max(StockQuote.trade_date),
+        ).one()
+        return min_date, max_date

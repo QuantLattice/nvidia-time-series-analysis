@@ -7,6 +7,7 @@ toolbar, context panel, content area, and layout orchestration.
 
 
 import tkinter as tk
+from tkinter import ttk
 import os
 import datetime
 from datetime import date
@@ -201,21 +202,38 @@ class MainWindow:
             on_import_csv=self._import_csv,
             on_export_csv=self._export_csv,
             on_run_analysis=self._on_run_analysis,
-            on_export_txt=self._export_txt,
             on_generate_features=self._on_generate_features,
             on_plot_features=self._on_plot_features,
+            on_delete_selected=self._on_delete_selected,
+            on_delete_all=self._on_delete_all,
             translator=self.translator
         )
 
-        self.content_area = ContentArea(parent=self.root)
+        # ── main row: chart + stats side by side ────────────────
+        self._main_frame = ttk.Frame(self.root)
+
+        self.content_area = ContentArea(parent=self._main_frame)
         self.content_area.set_loader(self._load_quotes_page)
         self.content_area.set_placeholder(text="MAIN CONTENT")
+        self.content_area.grid(row=0, column=0, sticky="nsew")
+
+        self._report_panel = ttk.Frame(self._main_frame, width=260)
+        self._report_panel.grid(row=0, column=1, sticky="nsew")
+        self._report_panel.grid_remove()          # hidden until first plot
+        self._report_panel.grid_propagate(False)  # hold fixed width
+        self._report_panel.rowconfigure(1, weight=1)
+        self._report_panel.columnconfigure(0, weight=1)
+        self._report_text: Optional[tk.Text] = None
+
+        self._main_frame.columnconfigure(0, weight=1)
+        self._main_frame.columnconfigure(1, weight=0)
+        self._main_frame.rowconfigure(0, weight=1)
 
         self.layout = LayoutManager(root=self.root)
         self.layout.register(name=LayoutKey.MENU, widget=self.menu_bar)
         self.layout.register(name=LayoutKey.TOOLBAR, widget=self.toolbar)
         self.layout.register(name=LayoutKey.CONTEXT, widget=self.context_panel)
-        self.layout.register(name=LayoutKey.CONTENT, widget=self.content_area)
+        self.layout.register(name=LayoutKey.CONTENT, widget=self._main_frame)
 
         self.layout.build(
             rows=[
@@ -241,11 +259,15 @@ class MainWindow:
     def _load_quotes_page(
         self,
         page: int,
-        page_size: int
+        page_size: int,
+        sort_col: str = 'trade_date',
+        sort_desc: bool = False,
     ) -> Dict[str, object]:
         return self.stock_quote_controller.get_quotes_page(
             page=page,
             page_size=page_size,
+            sort_col=sort_col,
+            sort_desc=sort_desc,
         )
 
     def _import_csv(self) -> None:
@@ -255,6 +277,58 @@ class MainWindow:
 
         result = self.csv_controller.import_csv(str(path))
         self.csv_result_handler.show_import_result(result, self.data_dialog)
+
+    def _on_delete_selected(self) -> None:
+        ids = self.content_area.get_selected_ids()
+        if not ids:
+            self.data_dialog.show_info(
+                title="Delete selected",
+                message="No rows selected. Use Shift/Cmd+click to select rows.",
+            )
+            return
+
+        confirmed = self.data_dialog.ask_confirm(
+            title="Delete selected",
+            message=f"Delete {len(ids)} selected record(s)? This cannot be undone.",
+        )
+        if not confirmed:
+            return
+
+        errors = 0
+        for quote_id in ids:
+            result = self.stock_quote_controller.delete_quote_by_id(quote_id)
+            if not result["success"]:
+                errors += 1
+
+        self.content_area.refresh()
+
+        if errors:
+            self.data_dialog.show_error(
+                title="Delete selected",
+                message=f"Deleted {len(ids) - errors} record(s). {errors} failed.",
+            )
+
+    def _on_delete_all(self) -> None:
+        confirmed = self.data_dialog.ask_confirm(
+            title="Delete all",
+            message="Delete ALL records from the database? This cannot be undone.",
+        )
+        if not confirmed:
+            return
+
+        result = self.stock_quote_controller.delete_all_quotes()
+        if result["success"]:
+            deleted = result["data"]["deleted"]
+            self.content_area.refresh()
+            self.data_dialog.show_info(
+                title="Delete all",
+                message=f"Deleted {deleted} record(s).",
+            )
+        else:
+            self.data_dialog.show_error(
+                title="Delete all — Error",
+                message=result["error"] or "Unknown error",
+            )
 
     def _export_csv(self) -> None:
         path = self.data_dialog.ask_csv_to_export()
@@ -281,6 +355,12 @@ class MainWindow:
                 message=result["error"] or "Unknown error",
             )
 
+    def _get_db_date_range(self):
+        result = self.stock_quote_controller.get_date_range()
+        if result["success"] and result["data"]:
+            return result["data"]["min_date"], result["data"]["max_date"]
+        return None, None
+
     def on_section_click(
         self,
         section: str
@@ -294,12 +374,14 @@ class MainWindow:
 
             self.content_area.clear()
             self.content_area.set_placeholder("MAIN CONTENT")
+            self._report_panel.grid_remove()
 
             return
 
         ui_state.active_section = section
 
-        self.context_panel.render(section=section)
+        min_date, max_date = self._get_db_date_range()
+        self.context_panel.render(section=section, min_date=min_date, max_date=max_date)
 
         self.layout.show(name=LayoutKey.CONTEXT)
 
@@ -309,6 +391,7 @@ class MainWindow:
         self,
         section: str
     ) -> None:
+        self._report_panel.grid_remove()
 
         if section == "data":
             self._render_data_content()
@@ -321,11 +404,6 @@ class MainWindow:
         elif section == "features":
             self.content_area.set_placeholder(
                 "Select a generator and date range, then click Generate."
-            )
-
-        elif section == "reports":
-            self.content_area.set_placeholder(
-                "Reports"
             )
 
     def _render_data_content(self) -> None:
@@ -344,7 +422,7 @@ class MainWindow:
         end_date: date,
         chart_type: str,
     ) -> None:
-        """Fetch data, build the requested chart, and display it."""
+        """Fetch data, build the requested chart with stats panel, and display it."""
 
         result = self.stock_quote_controller.get_quotes_by_date_range(
             start_date=start_date,
@@ -365,6 +443,57 @@ class MainWindow:
 
         fig = self._build_figure(quotes, chart_type, start_date, end_date)
         self.content_area.show_chart(fig)
+
+        stats_text = self._build_stats_text(quotes, start_date, end_date)
+        self._show_report_panel(stats_text)
+
+    def _build_stats_text(
+        self,
+        quotes: List[Any],
+        start_date: date,
+        end_date: date,
+    ) -> str:
+        """Compute descriptive stats for close price and volume."""
+
+        import statistics as st
+
+        closes = [q["close_price"] for q in quotes]
+        volumes = [q["volume"] for q in quotes]
+        highs = [q["high_price"] for q in quotes]
+        lows = [q["low_price"] for q in quotes]
+
+        def fmt_vol(v: float) -> str:
+            if v >= 1_000_000:
+                return f"{v / 1_000_000:.2f}M"
+            if v >= 1_000:
+                return f"{v / 1_000:.1f}K"
+            return str(int(v))
+
+        lines = [
+            f"Период:",
+            f"  {start_date}",
+            f"  {end_date}",
+            f"Торговых дней: {len(quotes)}",
+            "",
+            "─── Цена закрытия ───",
+            f"Мин:     ${min(closes):.2f}",
+            f"Макс:    ${max(closes):.2f}",
+            f"Среднее: ${sum(closes)/len(closes):.2f}",
+            f"Медиана: ${st.median(closes):.2f}",
+            f"σ:       ${st.stdev(closes):.2f}" if len(closes) > 1 else "",
+            "",
+            "─── High / Low ──────",
+            f"Max High: ${max(highs):.2f}",
+            f"Min Low:  ${min(lows):.2f}",
+            f"Диапазон: ${max(highs) - min(lows):.2f}",
+            "",
+            "─── Объём торгов ────",
+            f"Мин:     {fmt_vol(min(volumes))}",
+            f"Макс:    {fmt_vol(max(volumes))}",
+            f"Среднее: {fmt_vol(sum(volumes)/len(volumes))}",
+        ]
+
+        return "\n".join(lines)
 
     def _build_figure(
         self,
@@ -549,6 +678,33 @@ class MainWindow:
         fig = self._build_feature_figure(self._features_df, selected_columns)
         self.content_area.show_chart(fig)
 
+        stats_text = self._build_feature_stats_text(self._features_df, selected_columns)
+        self._show_report_panel(stats_text)
+
+    def _build_feature_stats_text(self, df, selected_columns: List[str]) -> str:
+        """Compute descriptive stats for each selected feature column."""
+
+        import statistics as st
+
+        lines: List[str] = []
+        for col in selected_columns:
+            if col not in df.columns:
+                continue
+            values = [v for v in df[col].dropna().tolist()]
+            if not values:
+                continue
+            lines.append(f"── {col} ──")
+            lines.append(f"  Кол-во: {len(values)}")
+            lines.append(f"  Мин:    {min(values):.4f}")
+            lines.append(f"  Макс:   {max(values):.4f}")
+            lines.append(f"  Среднее:{sum(values)/len(values):.4f}")
+            lines.append(f"  Медиана:{st.median(values):.4f}")
+            if len(values) > 1:
+                lines.append(f"  σ:      {st.stdev(values):.4f}")
+            lines.append("")
+
+        return "\n".join(lines)
+
     def _build_feature_figure(self, df, selected_columns: List[str]):
         """Build a Matplotlib Figure with one line per selected column."""
 
@@ -588,6 +744,60 @@ class MainWindow:
         fig.tight_layout()
 
         return fig
+
+    # ── report panel ──────────────────────────────────────────
+
+    def _show_report_panel(self, stats_text: str) -> None:
+        """Populate and reveal the right-side report panel."""
+
+        style = ttk.Style()
+        bg = style.lookup("TFrame", "background") or "#ffffff"
+        fg = style.lookup("TLabel", "foreground") or "#000000"
+        sep = style.lookup("TSeparator", "background") or bg
+
+        # clear old content
+        for w in self._report_panel.winfo_children():
+            w.destroy()
+
+        ttk.Label(
+            self._report_panel,
+            text="Отчёт",
+            font=("", 10, "bold"),
+        ).grid(row=0, column=0, columnspan=2, sticky="w", padx=6, pady=(6, 2))
+
+        self._report_text = tk.Text(
+            self._report_panel,
+            font=("Courier New", 9),
+            wrap="word",
+            relief="flat",
+            padx=6,
+            pady=4,
+            background=bg,
+            foreground=fg,
+            insertbackground=fg,
+            borderwidth=0,
+            highlightthickness=1,
+            highlightbackground=sep,
+            state="normal",
+        )
+        self._report_text.insert("1.0", stats_text)
+        self._report_text.config(state="disabled")
+        self._report_text.grid(row=1, column=0, sticky="nsew", padx=(6, 0))
+
+        sb = ttk.Scrollbar(
+            self._report_panel, orient="vertical",
+            command=self._report_text.yview,
+        )
+        sb.grid(row=1, column=1, sticky="ns", padx=(0, 2))
+        self._report_text.config(yscrollcommand=sb.set)
+
+        ttk.Button(
+            self._report_panel,
+            text="Скачать отчёт",
+            command=self._export_txt,
+        ).grid(row=2, column=0, columnspan=2, sticky="ew", padx=6, pady=(4, 6))
+
+        self._report_panel.grid()   # show
 
     def toggle_panels(self) -> None:
         """
@@ -639,7 +849,12 @@ class MainWindow:
         self.layout.show(name=LayoutKey.TOOLBAR)
 
         if ui_state.active_section is not None:
-            self.context_panel.render(section=ui_state.active_section)
+            min_date, max_date = self._get_db_date_range()
+            self.context_panel.render(
+                section=ui_state.active_section,
+                min_date=min_date,
+                max_date=max_date,
+            )
             self.layout.show(name=LayoutKey.CONTEXT)
         else:
             self.layout.hide(name=LayoutKey.CONTEXT)

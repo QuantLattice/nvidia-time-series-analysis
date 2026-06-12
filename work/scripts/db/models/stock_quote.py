@@ -6,7 +6,7 @@ financial time series data for a stock (e.g., NVIDIA).
 
 from datetime import date
 
-from sqlalchemy import Date, Integer, Numeric, String
+from sqlalchemy import Date, Integer, Numeric, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from work.scripts.db.base import Base
@@ -41,6 +41,9 @@ class StockQuote(Base):
     """
 
     __tablename__ = "stock_quotes"
+    __table_args__ = (
+        UniqueConstraint('trade_date', 'source', name='uq_stock_quotes_trade_date_source'),
+    )
 
     id: Mapped[int] = mapped_column(
         Integer,

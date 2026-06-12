@@ -73,3 +73,14 @@ class DataDialogService:
             message=message,
             parent=self.root
         )
+
+    def ask_confirm(
+        self,
+        title: str,
+        message: str
+    ) -> bool:
+        return messagebox.askyesno(
+            title=title,
+            message=message,
+            parent=self.root
+        )

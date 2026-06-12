@@ -8,6 +8,4 @@ This module defines language identifiers and their display labels.
 LANGUAGES = {
     "ru": "Русский",
     "en": "English",
-    "pt": "Português",
-    "ky": "Кыргызча",
 }

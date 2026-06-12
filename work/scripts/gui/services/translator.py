@@ -22,23 +22,7 @@ from work.library.utils import load
 
 @dataclass(slots=True)
 class MenuBarKeys:
-    """
-    Localized strings for the main menu bar.
-
-    Attributes
-    ----------
-    file_button_text : str
-        Text for the File menu button.
-    help_button_text : str
-        Text for the Help menu button.
-    settings_button_tooltip : str
-        Tooltip text for the Settings menu button.
-    display_button_tooltip : str
-        Tooltip text for the Display menu button.
-    """
-
     file_button_text: str
-    help_button_text: str
     settings_button_tooltip: str
     display_button_tooltip: str
     import_button_label: str
@@ -58,14 +42,11 @@ class ToolBarKeys:
         Tooltip text for the Analysis toolbar button.
     features_button_tooltip : str
         Tooltip text for the Features toolbar button.
-    reports_button_tooltip : str
-        Tooltip text for the Reports toolbar button.
     """
 
     data_button_tooltip: str
     analysis_button_tooltip: str
     features_button_tooltip: str
-    reports_button_tooltip: str
 
 
 @dataclass(slots=True)

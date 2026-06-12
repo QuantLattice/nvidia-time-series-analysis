@@ -42,9 +42,6 @@ class ContextPanel(ttk.Frame):
         Callback invoked when the user clicks "Plot".
         Receives (start_date, end_date, chart_type).
 
-    on_export_txt : Callable[[], None]
-        Callback invoked when the user clicks "Export TXT".
-
     on_generate_features : Callable[[str, date, date], Optional[List[str]]]
         Callback invoked when the user clicks "Generate".
         Receives (generator_type, start_date, end_date).
@@ -53,6 +50,12 @@ class ContextPanel(ttk.Frame):
     on_plot_features : Callable[[List[str]], None]
         Callback invoked when the user clicks "Plot" in features section.
         Receives the list of selected column names.
+
+    on_delete_selected : Callable[[], None]
+        Callback invoked when the user clicks "Delete selected".
+
+    on_delete_all : Callable[[], None]
+        Callback invoked when the user clicks "Delete all".
 
     translator : Translator
         Localization service.
@@ -66,9 +69,10 @@ class ContextPanel(ttk.Frame):
         on_import_csv: Callable[[], None],
         on_export_csv: Callable[[], None],
         on_run_analysis: Callable[[date, date, str], None],
-        on_export_txt: Callable[[], None],
         on_generate_features: Callable[[str, date, date], Optional[List[str]]],
         on_plot_features: Callable[[List[str]], None],
+        on_delete_selected: Callable[[], None],
+        on_delete_all: Callable[[], None],
         translator: Translator
     ) -> None:
         super().__init__(parent)
@@ -78,9 +82,10 @@ class ContextPanel(ttk.Frame):
         self.on_import_csv = on_import_csv
         self.on_export_csv = on_export_csv
         self.on_run_analysis = on_run_analysis
-        self.on_export_txt = on_export_txt
         self.on_generate_features = on_generate_features
         self.on_plot_features = on_plot_features
+        self.on_delete_selected = on_delete_selected
+        self.on_delete_all = on_delete_all
         self.translator = translator
 
         self._start_picker: Optional[DatePickerEntry] = None
@@ -93,10 +98,13 @@ class ContextPanel(ttk.Frame):
         self._feat_column_frame: Optional[ttk.Frame] = None
         self._features_listbox: Optional[tk.Listbox] = None
         self._feat_df_columns: List[str] = []
+        self._stats_area: Optional[ttk.Frame] = None
 
     def render(
         self,
-        section: str
+        section: str,
+        min_date: Optional[date] = None,
+        max_date: Optional[date] = None,
     ) -> None:
         """
         Render controls for the requested section.
@@ -105,43 +113,46 @@ class ContextPanel(ttk.Frame):
         ----------
         section : str
             Active application section identifier.
+        min_date : date, optional
+            Earliest available date in the database (pre-fills start picker).
+        max_date : date, optional
+            Latest available date in the database (pre-fills end picker).
         """
 
+        self._stats_area = None
         for widget in self.winfo_children():
             widget.destroy()
 
         if section == "data":
             self._build_data()
         elif section == "analysis":
-            self._build_analysis()
+            self._build_analysis(min_date=min_date, max_date=max_date)
         elif section == "features":
-            self._build_features()
-        elif section == "reports":
-            self._build_reports()
+            self._build_features(min_date=min_date, max_date=max_date)
 
     def _build_data(self) -> None:
-        """
-        Build data section controls.
-        """
-
-        actions = ttk.Frame(self)
-        actions.pack(anchor="w")
-
-        data = self.translator.get_data().context_panel
+        ttk.Label(
+            master=self,
+            text="Data management"
+        ).grid(row=0, column=0, sticky="w", pady=(0, 8))
 
         self.ui_factory.text_button(
-            parent=actions,
-            text=data.import_csv_text,
-            command=self.on_import_csv,
-        ).pack(side="left", padx=5, pady=5)
+            parent=self,
+            text="Delete selected",
+            command=self.on_delete_selected,
+        ).grid(row=1, column=0, sticky="ew", pady=(0, 4))
 
         self.ui_factory.text_button(
-            parent=actions,
-            text=data.export_csv_text,
-            command=self.on_export_csv,
-        ).pack(side="left", padx=5, pady=5)
+            parent=self,
+            text="Delete all",
+            command=self.on_delete_all,
+        ).grid(row=2, column=0, sticky="ew")
 
-    def _build_analysis(self) -> None:
+    def _build_analysis(
+        self,
+        min_date: Optional[date] = None,
+        max_date: Optional[date] = None,
+    ) -> None:
         """
         Build analysis section controls: date pickers, chart type, plot button.
         Year is selected inside the CalendarPopup via its built-in spinbox.
@@ -157,6 +168,8 @@ class ContextPanel(ttk.Frame):
         form.columnconfigure(1, weight=1)
 
         today = date.today()
+        start_initial = min_date if min_date is not None else date(today.year, 1, 1)
+        end_initial = max_date if max_date is not None else today
 
         # --- Start date ---
         ttk.Label(master=form, text="Start date").grid(
@@ -164,7 +177,7 @@ class ContextPanel(ttk.Frame):
         )
         self._start_picker = DatePickerEntry(
             parent=form,
-            initial_date=date(today.year, 1, 1),
+            initial_date=start_initial,
         )
         self._start_picker.grid(row=0, column=1, sticky="w", pady=3)
 
@@ -174,7 +187,7 @@ class ContextPanel(ttk.Frame):
         )
         self._end_picker = DatePickerEntry(
             parent=form,
-            initial_date=today,
+            initial_date=end_initial,
         )
         self._end_picker.grid(row=1, column=1, sticky="w", pady=3)
 
@@ -226,7 +239,11 @@ class ContextPanel(ttk.Frame):
 
         self.on_run_analysis(start, end, chart_type)
 
-    def _build_features(self) -> None:
+    def _build_features(
+        self,
+        min_date: Optional[date] = None,
+        max_date: Optional[date] = None,
+    ) -> None:
         """
         Build features section controls: generator selector, date range,
         generate button, and (after generation) column selector with plot button.
@@ -247,6 +264,8 @@ class ContextPanel(ttk.Frame):
         self._feat_form = form
 
         today = date.today()
+        start_initial = min_date if min_date is not None else date(today.year, 1, 1)
+        end_initial = max_date if max_date is not None else today
 
         ttk.Label(master=form, text="Generator").grid(
             row=0, column=0, sticky="w", padx=(0, 8), pady=3
@@ -266,7 +285,7 @@ class ContextPanel(ttk.Frame):
         )
         self._feat_start_picker = DatePickerEntry(
             parent=form,
-            initial_date=date(today.year, 1, 1),
+            initial_date=start_initial,
         )
         self._feat_start_picker.grid(row=1, column=1, sticky="w", pady=3)
 
@@ -275,7 +294,7 @@ class ContextPanel(ttk.Frame):
         )
         self._feat_end_picker = DatePickerEntry(
             parent=form,
-            initial_date=today,
+            initial_date=end_initial,
         )
         self._feat_end_picker.grid(row=2, column=1, sticky="w", pady=3)
 
@@ -313,6 +332,10 @@ class ContextPanel(ttk.Frame):
         if self._feat_column_frame is not None:
             self._feat_column_frame.destroy()
 
+        if self._stats_area is not None:
+            self._stats_area.destroy()
+            self._stats_area = None
+
         self._feat_column_frame = ttk.Frame(self)
         self._feat_column_frame.grid(row=2, column=0, sticky="nsew", pady=(8, 0))
 
@@ -326,6 +349,11 @@ class ContextPanel(ttk.Frame):
         list_frame = ttk.Frame(self._feat_column_frame)
         list_frame.pack(fill="both", expand=True)
 
+        style = ttk.Style()
+        bg = style.lookup("TFrame", "background") or "#ffffff"
+        fg = style.lookup("TLabel", "foreground") or "#000000"
+        sel_bg = style.lookup("TButton", "background") or "#d0d0d0"
+
         scrollbar = ttk.Scrollbar(list_frame, orient="vertical")
         self._features_listbox = tk.Listbox(
             list_frame,
@@ -333,6 +361,14 @@ class ContextPanel(ttk.Frame):
             yscrollcommand=scrollbar.set,
             height=8,
             exportselection=False,
+            background=bg,
+            foreground=fg,
+            selectbackground=sel_bg,
+            selectforeground=fg,
+            borderwidth=0,
+            highlightthickness=1,
+            highlightbackground=style.lookup("TSeparator", "background") or bg,
+            relief="flat",
         )
         scrollbar.config(command=self._features_listbox.yview)
 
@@ -360,23 +396,61 @@ class ContextPanel(ttk.Frame):
 
         self.on_plot_features(selected_columns)
 
-    def _build_reports(self) -> None:
-        """
-        Build reports section controls: CSV export and TXT analytics report.
-        """
+    # ── public stats API ─────────────────────────────────────────
 
-        data = self.translator.get_data().context_panel
+    def show_stats(
+        self,
+        stats_text: str,
+        on_download: Optional[Callable[[], None]] = None,
+    ) -> None:
+        """Render a stats block below the section controls (grid row 10)."""
 
-        ttk.Label(master=self, text="Reports").pack(anchor="w")
+        if self._stats_area is not None:
+            self._stats_area.destroy()
 
-        self.ui_factory.text_button(
-            parent=self,
-            text=data.export_csv_text,
-            command=self.on_export_csv,
-        ).pack(side="left", padx=5, pady=5)
+        style = ttk.Style()
+        bg = style.lookup("TFrame", "background") or "#ffffff"
+        fg = style.lookup("TLabel", "foreground") or "#000000"
+        sep_color = style.lookup("TSeparator", "background") or bg
 
-        self.ui_factory.text_button(
-            parent=self,
-            text="Export TXT",
-            command=self.on_export_txt,
-        ).pack(side="left", padx=5, pady=5)
+        frame = ttk.Frame(self)
+        frame.grid(row=10, column=0, sticky="nsew", pady=(10, 0))
+        frame.columnconfigure(0, weight=1)
+        frame.rowconfigure(1, weight=1)
+        self.rowconfigure(10, weight=1)
+        self._stats_area = frame
+
+        ttk.Separator(frame, orient="horizontal").grid(
+            row=0, column=0, columnspan=2, sticky="ew", pady=(0, 6)
+        )
+
+        text = tk.Text(
+            frame,
+            font=("Courier New", 9),
+            wrap="word",
+            relief="flat",
+            padx=6,
+            pady=4,
+            background=bg,
+            foreground=fg,
+            insertbackground=fg,
+            borderwidth=0,
+            highlightthickness=1,
+            highlightbackground=sep_color,
+            state="normal",
+        )
+        text.insert("1.0", stats_text)
+        text.config(state="disabled")
+        text.grid(row=1, column=0, sticky="nsew")
+
+        sb = ttk.Scrollbar(frame, orient="vertical", command=text.yview)
+        sb.grid(row=1, column=1, sticky="ns")
+        text.config(yscrollcommand=sb.set)
+
+        if on_download is not None:
+            ttk.Button(
+                frame,
+                text="Скачать отчёт",
+                command=on_download,
+            ).grid(row=2, column=0, columnspan=2, sticky="ew", pady=(6, 0))
+

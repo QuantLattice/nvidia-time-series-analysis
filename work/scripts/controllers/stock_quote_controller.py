@@ -26,6 +26,7 @@ from typing import (
     Dict,
     Any,
     Callable,
+    Optional,
     Union,
     List
 )
@@ -207,12 +208,16 @@ class StockQuoteController:
     def get_quotes_page(
         self,
         page: int,
-        page_size: int = 100
+        page_size: int = 100,
+        sort_col: str = 'trade_date',
+        sort_desc: bool = False,
     ) -> Dict[str, Any]:
         return self._handle(
             func=lambda: self._get_page(
                 page=page,
-                page_size=page_size
+                page_size=page_size,
+                sort_col=sort_col,
+                sort_desc=sort_desc,
             )
         )
 
@@ -236,7 +241,9 @@ class StockQuoteController:
     def _get_page(
         self,
         page: int,
-        page_size: int
+        page_size: int,
+        sort_col: str = 'trade_date',
+        sort_desc: bool = False,
     ) -> Dict[str, Any]:
         if page <= 0:
             raise ValueError('page must be positive')
@@ -245,7 +252,9 @@ class StockQuoteController:
 
         quotes, total = self.service.get_quotes_page(
             page=page,
-            page_size=page_size
+            page_size=page_size,
+            sort_col=sort_col,
+            sort_desc=sort_desc,
         )
 
         return {
@@ -285,21 +294,6 @@ class StockQuoteController:
         start_date: date,
         end_date: date,
     ) -> Dict[str, Any]:
-        """Retrieve stock quotes within a date range.
-
-        Parameters
-        ----------
-        start_date : date
-            Start of the range (inclusive).
-        end_date : date
-            End of the range (inclusive).
-
-        Returns
-        -------
-        dict[str, Any]
-            Standardized response containing a list of quote dicts.
-        """
-
         return self._handle(
             lambda: self._get_by_date_range(start_date, end_date)
         )
@@ -313,6 +307,20 @@ class StockQuoteController:
             self._to_dict(q)
             for q in self.service.get_quotes_by_date_range(start_date, end_date)
         ]
+
+    def delete_all_quotes(self) -> Dict[str, Any]:
+        """Delete all stock quotes from the database."""
+
+        return self._handle(lambda: {"deleted": self.service.delete_all_quotes()})
+
+    def get_date_range(self) -> Dict[str, Any]:
+        """Return min/max trade_date across all stored quotes."""
+
+        def _inner():
+            min_date, max_date = self.service.get_date_range()
+            return {"min_date": min_date, "max_date": max_date}
+
+        return self._handle(_inner)
 
     def get_all_quotes(self) -> Dict[str, Any]:
         """Retrieve all stock quotes.

@@ -93,7 +93,6 @@ class ToolBar(ttk.Frame):
                 toolbar.features_button_tooltip,
                 assets.analysis_icon
             ),
-            "reports": (toolbar.reports_button_tooltip, assets.reports_icon),
         }
 
         for key, (label, path) in items.items():

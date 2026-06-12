@@ -7,8 +7,9 @@ active application section.
 """
 
 
+import tkinter as tk
 from tkinter import ttk, Tk
-from typing import Any, Callable, Dict, List
+from typing import Any, Callable, Dict, List, Optional
 
 from matplotlib.figure import Figure
 
@@ -40,9 +41,9 @@ class ContentArea(ttk.Frame):
         self._page = 1
         self._page_size = 100
         self._total_pages = 1
-        self._load_page_callback: Callable[
-            [int, int], Dict[str, Any]
-        ] | None = None
+        self._sort_col: str = 'trade_date'
+        self._sort_desc: bool = False
+        self._load_page_callback: Optional[Callable] = None
         self._columns = (
             'id',
             'trade_date',
@@ -55,6 +56,29 @@ class ContentArea(ttk.Frame):
             'volume',
         )
         self._build()
+        self.bind('<Configure>', self._on_resize)
+
+    def _on_resize(self, event) -> None:
+        if not hasattr(self, 'table') or not self.table.winfo_exists():
+            return
+        avail = event.width - 20
+        if avail < 50:
+            return
+        weights = {
+            'id': 1,
+            'trade_date': 3,
+            'source': 3,
+            'open_price': 2,
+            'high_price': 2,
+            'low_price': 2,
+            'close_price': 2,
+            'adj_close_price': 2,
+            'volume': 2,
+        }
+        total_w = sum(weights.get(c, 2) for c in self._columns)
+        for col in self._columns:
+            w = max(30, int(avail * weights.get(col, 2) / total_w))
+            self.table.column(col, width=w, stretch=False)
 
     def _build(self) -> None:
         self.clear()
@@ -63,11 +87,13 @@ class ContentArea(ttk.Frame):
             self,
             columns=self._columns,
             show='headings',
+            selectmode='extended',
         )
 
+        self._update_headings()
+
         for col in self._columns:
-            self.table.heading(col, text=col)
-            self.table.column(col, width=100, anchor='center')
+            self.table.column(col, width=100, anchor='center', stretch=False)
 
         scrollbar_y = ttk.Scrollbar(
             self,
@@ -82,21 +108,13 @@ class ContentArea(ttk.Frame):
         pager = ttk.Frame(self)
         pager.grid(row=1, column=0, columnspan=2, sticky='ew', pady=(8, 0))
 
-        self.prev_button = ttk.Button(
-            pager,
-            text='Prev',
-            command=self.prev_page,
-        )
+        self.prev_button = ttk.Button(pager, text='Prev', command=self.prev_page)
         self.prev_button.pack(side='left')
 
         self.page_label = ttk.Label(pager, text='Page 1 / 1')
         self.page_label.pack(side='left', padx=10)
 
-        self.next_button = ttk.Button(
-            pager,
-            text='Next',
-            command=self.next_page,
-        )
+        self.next_button = ttk.Button(pager, text='Next', command=self.next_page)
         self.next_button.pack(side='left')
 
         self.columnconfigure(0, weight=1)
@@ -118,9 +136,26 @@ class ContentArea(ttk.Frame):
         self.clear()
         ttk.Label(self, text=text).pack(padx=10, pady=10)
 
+    def _update_headings(self) -> None:
+        for col in self._columns:
+            label = col
+            if col == self._sort_col:
+                label = f'{col} {"▼" if self._sort_desc else "▲"}'
+            self.table.heading(col, text=label, command=lambda c=col: self._sort_by(c))
+
+    def _sort_by(self, col: str) -> None:
+        if self._sort_col == col:
+            self._sort_desc = not self._sort_desc
+        else:
+            self._sort_col = col
+            self._sort_desc = False
+        self._page = 1
+        self._update_headings()
+        self._reload()
+
     def set_loader(
         self,
-        loader: Callable[[int, int], Dict[str, Any]]
+        loader: Callable,
     ) -> None:
         self._load_page_callback = loader
 
@@ -139,7 +174,9 @@ class ContentArea(ttk.Frame):
         if self._load_page_callback is None:
             return
 
-        result = self._load_page_callback(self._page, self._page_size)
+        result = self._load_page_callback(
+            self._page, self._page_size, self._sort_col, self._sort_desc
+        )
         data = result['data']
 
         if data is None:
@@ -194,19 +231,19 @@ class ContentArea(ttk.Frame):
             self._page -= 1
             self._reload()
 
+    def get_selected_ids(self) -> List[int]:
+        """Return the IDs of all currently selected table rows."""
+        ids = []
+        for item in self.table.selection():
+            values = self.table.item(item, 'values')
+            if values:
+                try:
+                    ids.append(int(values[0]))
+                except (ValueError, IndexError):
+                    pass
+        return ids
+
     def show_chart(self, figure: Figure) -> None:
-        """
-        Embed a Matplotlib figure in the content area.
-
-        Replaces any existing content with a FigureCanvasTkAgg canvas
-        and the standard navigation toolbar (zoom, pan, save, etc.).
-
-        Parameters
-        ----------
-        figure : Figure
-            Rendered Matplotlib figure to display.
-        """
-
         from matplotlib.backends.backend_tkagg import (
             FigureCanvasTkAgg,
             NavigationToolbar2Tk,
@@ -217,13 +254,89 @@ class ContentArea(ttk.Frame):
         canvas = FigureCanvasTkAgg(figure, master=self)
         canvas.draw()
 
-        # toolbar must be created AFTER canvas.draw(); keep a ref so GC won't collect it
         toolbar_frame = ttk.Frame(self)
         toolbar_frame.grid(row=0, column=0, sticky="ew")
 
         self._toolbar = NavigationToolbar2Tk(canvas, toolbar_frame, pack_toolbar=True)
         self._toolbar.update()
 
+        canvas.get_tk_widget().grid(row=1, column=0, sticky="nsew")
+
+        self.columnconfigure(0, weight=1)
+        self.rowconfigure(0, weight=0)
+        self.rowconfigure(1, weight=1)
+
+    def show_chart_with_report(
+        self,
+        figure: Figure,
+        stats_text: str,
+        on_download: Optional[Callable[[], None]] = None,
+    ) -> None:
+        """Toolbar compact on the left; stats fills the rest of the top strip."""
+
+        from matplotlib.backends.backend_tkagg import (
+            FigureCanvasTkAgg,
+            NavigationToolbar2Tk,
+        )
+
+        self.clear()
+
+        style = ttk.Style()
+        bg = style.lookup("TFrame", "background") or "#ffffff"
+        fg = style.lookup("TLabel", "foreground") or "#000000"
+
+        canvas = FigureCanvasTkAgg(figure, master=self)
+        canvas.draw()
+
+        # ── row 0: top strip — toolbar (left, compact) + stats (right, expands) ──
+        top_frame = ttk.Frame(self)
+        top_frame.grid(row=0, column=0, sticky="nsew")
+        # column 0 = toolbar (natural width); column 1 = stats (takes the rest)
+        top_frame.columnconfigure(0, weight=0)
+        top_frame.columnconfigure(1, weight=1)
+        top_frame.rowconfigure(0, weight=1)
+
+        toolbar_frame = ttk.Frame(top_frame)
+        toolbar_frame.grid(row=0, column=0, sticky="nw")
+        self._toolbar = NavigationToolbar2Tk(canvas, toolbar_frame, pack_toolbar=True)
+        self._toolbar.update()
+
+        # stats panel — no fixed width, fills all remaining horizontal space
+        stats_frame = ttk.Frame(top_frame)
+        stats_frame.grid(row=0, column=1, sticky="nsew", padx=(8, 0))
+        stats_frame.rowconfigure(0, weight=1)
+        stats_frame.columnconfigure(0, weight=1)
+
+        text_widget = tk.Text(
+            stats_frame,
+            wrap="none",
+            font=("Courier New", 9),
+            relief="flat",
+            padx=8,
+            pady=4,
+            background=bg,
+            foreground=fg,
+            insertbackground=fg,
+            borderwidth=0,
+            highlightthickness=0,
+            state="normal",
+        )
+        text_widget.insert("1.0", stats_text)
+        text_widget.config(state="disabled")
+        text_widget.grid(row=0, column=0, sticky="nsew")
+
+        sb = ttk.Scrollbar(stats_frame, orient="vertical", command=text_widget.yview)
+        sb.grid(row=0, column=1, sticky="ns")
+        text_widget.config(yscrollcommand=sb.set)
+
+        if on_download is not None:
+            ttk.Button(
+                stats_frame,
+                text="Скачать отчёт",
+                command=on_download,
+            ).grid(row=1, column=0, columnspan=2, sticky="ew", padx=2, pady=(2, 0))
+
+        # ── row 1: chart canvas fills the rest ───────────────────
         canvas.get_tk_widget().grid(row=1, column=0, sticky="nsew")
 
         self.columnconfigure(0, weight=1)

@@ -1,7 +1,6 @@
 {
     "menu_bar": {
         "file_button_text": "Файл",
-        "help_button_text": "Справка",
         "settings_button_tooltip": "Настройки",
         "display_button_tooltip": "Отображение панелей",
         "import_button_label": "Импорт CSV",
@@ -10,8 +9,7 @@
     "toolbar": {
         "data_button_tooltip": "Данные",
         "analysis_button_tooltip": "Анализ",
-        "features_button_tooltip": "Признаки",
-        "reports_button_tooltip": "Отчет"
+        "features_button_tooltip": "Признаки"
     },
     "settings_menu": {
         "language_menu": {
