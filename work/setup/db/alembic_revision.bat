@@ -25,11 +25,12 @@ if "%~1"=="" (
 echo %LOG_STEP% Generating migration...
 echo %LOG_INFO% Message: %*
 
-alembic revision --autogenerate -m "%*"
+conda run -n nvidia-tsa alembic revision --autogenerate -m "%*"
 
 if errorlevel 1 (
     echo %LOG_ERROR% Migration generation failed
     popd
+    endlocal
     exit /b 1
 )
 

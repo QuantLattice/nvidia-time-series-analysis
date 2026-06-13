@@ -2,7 +2,7 @@
 setlocal enabledelayedexpansion
 
 :: ---------------------------------------------------------------
-:: Locate conda base
+:: Locate Anaconda / Miniconda
 :: ---------------------------------------------------------------
 set CONDA_ROOT=
 
@@ -49,8 +49,9 @@ if errorlevel 1 (
 )
 
 :: ---------------------------------------------------------------
-:: Launch the application
+:: Change to project root and launch the application
 :: ---------------------------------------------------------------
+pushd %~dp0..\..
 echo Starting NVIDIA Time Series Analysis...
 echo.
 python -m work.scripts.main
@@ -58,5 +59,12 @@ python -m work.scripts.main
 if errorlevel 1 (
     echo.
     echo [ERROR] Application exited with an error. See output above.
+    popd
     pause
+    endlocal
+    exit /b 1
 )
+
+popd
+endlocal
+exit /b 0
