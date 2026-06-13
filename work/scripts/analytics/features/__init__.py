@@ -51,10 +51,12 @@ from .technical_indicator_feature_generator import (
     TechnicalIndicatorConfig,
     TechnicalIndicatorsFeatureGenerator
 )
-from .categorical_features import (
+from .categorical_contracts import (
     CategoricalFeatureConfig,
+    CategoricalLabels,
+)
+from .categorical_features import (
     CategoricalFeatureGenerator,
-    CategoricalLabels
 )
 
 

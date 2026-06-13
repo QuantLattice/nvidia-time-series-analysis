@@ -101,7 +101,9 @@ class App():
         )
         self.csv_service = CSVService(stock_service=self.stock_quote_service)
         self.csv_controller = CSVController(service=self.csv_service)
-        self.report_controller = ReportController(service=self.stock_quote_service)
+        self.report_controller = ReportController(
+            service=self.stock_quote_service
+        )
 
         self.main_window = MainWindow(
             root=self.root,

@@ -2,8 +2,8 @@
 Descriptive statistics utilities for exploratory data analysis.
 
 This module provides reusable scalar statistics for pandas Series,
-including central tendency, dispersion, distribution shape, data
-quality metrics, directional ratios, and robust summary statistics.
+including dispersion, data quality, robust summary statistics, and
+stability metrics.
 
 The functions are intended for use in EDA pipelines, reporting
 layers, and statistical validation workflows.
@@ -12,47 +12,38 @@ layers, and statistical validation workflows.
 
 import pandas as pd
 import numpy as np
-from scipy.stats import skew, kurtosis as scipy_kurtosis  # type: ignore
 
+from work.scripts.analytics.statistics.central_tendency import (
+    mean,
+    median
+)
+from work.scripts.analytics.statistics.shape_statistics import (
+    skewness,
+    kurtosis,
+    positive_ratio,
+    negative_ratio,
+    zero_ratio
+)
 
-# =========================================================
-# CENTRAL TENDENCY
-# =========================================================
-
-def mean(series: pd.Series) -> float:
-    """
-    Calculate the arithmetic mean.
-
-    Parameters
-    ----------
-    series : pd.Series
-        Input data series.
-
-    Returns
-    -------
-    float
-        Arithmetic mean of the series.
-    """
-
-    return series.mean()
-
-
-def median(series: pd.Series) -> float:
-    """
-    Calculate the median value.
-
-    Parameters
-    ----------
-    series : pd.Series
-        Input data series.
-
-    Returns
-    -------
-    float
-        Median of the series.
-    """
-
-    return series.median()
+__all__ = [
+    "mean",
+    "median",
+    "skewness",
+    "kurtosis",
+    "positive_ratio",
+    "negative_ratio",
+    "zero_ratio",
+    "variance",
+    "std",
+    "data_range",
+    "min_value",
+    "max_value",
+    "missing_count",
+    "missing_ratio",
+    "trimmed_mean",
+    "mad",
+    "coefficient_of_variation",
+]
 
 
 # =========================================================
@@ -150,52 +141,6 @@ def max_value(series: pd.Series) -> float:
 
 
 # =========================================================
-# SHAPE OF DISTRIBUTION
-# =========================================================
-
-def skewness(series: pd.Series) -> float:
-    """
-    Calculate sample skewness.
-
-    Parameters
-    ----------
-    series : pd.Series
-        Input data series.
-
-    Returns
-    -------
-    float
-        Skewness of the series, or NaN if the series is empty.
-    """
-
-    clean = _safe_series(series=series)
-    if clean.empty:
-        return np.nan
-    return skew(a=clean)
-
-
-def kurtosis(series: pd.Series) -> float:
-    """
-    Calculate sample kurtosis.
-
-    Parameters
-    ----------
-    series : pd.Series
-        Input data series.
-
-    Returns
-    -------
-    float
-        Kurtosis of the series, or NaN if the series is empty.
-    """
-
-    clean = _safe_series(series=series)
-    if clean.empty:
-        return np.nan
-    return scipy_kurtosis(a=clean)
-
-
-# =========================================================
 # DATA QUALITY
 # =========================================================
 
@@ -233,73 +178,6 @@ def missing_ratio(series: pd.Series) -> float:
     """
 
     return series.isna().mean()
-
-
-# =========================================================
-# DIRECTIONAL STATISTICS
-# =========================================================
-
-def positive_ratio(series: pd.Series) -> float:
-    """
-    Calculate the ratio of positive values.
-
-    Parameters
-    ----------
-    series : pd.Series
-        Input data series.
-
-    Returns
-    -------
-    float
-        Share of values greater than zero, or NaN for an empty series.
-    """
-
-    clean = _safe_series(series=series)
-    if clean.empty:
-        return np.nan
-    return (clean > 0).mean()
-
-
-def negative_ratio(series: pd.Series) -> float:
-    """
-    Calculate the ratio of negative values.
-
-    Parameters
-    ----------
-    series : pd.Series
-        Input data series.
-
-    Returns
-    -------
-    float
-        Share of values less than zero, or NaN for an empty series.
-    """
-
-    clean = _safe_series(series=series)
-    if clean.empty:
-        return np.nan
-    return (clean < 0).mean()
-
-
-def zero_ratio(series: pd.Series) -> float:
-    """
-    Calculate the ratio of zero values.
-
-    Parameters
-    ----------
-    series : pd.Series
-        Input data series.
-
-    Returns
-    -------
-    float
-        Share of values equal to zero, or NaN for an empty series.
-    """
-
-    clean = _safe_series(series=series)
-    if clean.empty:
-        return np.nan
-    return (clean == 0).mean()
 
 
 # =========================================================

@@ -1,8 +1,8 @@
-"""
-Context panel component.
+"""Context panel component.
 
-This module implements the side panel that changes its content
-depending on the currently active application section.
+Side panel that changes its content depending on the active section.
+
+Авторы: Черкащенко Д.Д., Ловчиков С.О., Андреева М.А.
 """
 
 
@@ -15,50 +15,22 @@ from work.scripts.core import AppState
 from work.scripts.gui.factories import UIFactory
 from work.scripts.gui.services.translator import Translator
 from work.scripts.gui.utils.date_entry import DatePickerEntry
+from work.scripts.gui.layout.context_panel_analysis import (
+    build_analysis_form,
+)
+from work.scripts.gui.layout.context_panel_features import (
+    build_features_form,
+    build_column_selector,
+)
+from work.scripts.gui.layout.context_panel_stats import (
+    build_stats_area,
+)
 
 
 class ContextPanel(ttk.Frame):
-    """
-    Side panel that renders controls for the active section.
+    """Side panel rendering controls for the active section.
 
-    Parameters
-    ----------
-    parent : Tk
-        Root application window.
-
-    ui_factory : UIFactory
-        Factory used to create themed UI controls.
-
-    app_state : AppState
-        Shared runtime application state.
-
-    on_import_csv : Callable[[], None]
-        Callback for importing a CSV file.
-
-    on_export_csv : Callable[[], None]
-        Callback for exporting a CSV file.
-
-    on_run_analysis : Callable[[date, date, str], None]
-        Callback invoked when the user clicks "Plot".
-        Receives (start_date, end_date, chart_type).
-
-    on_generate_features : Callable[[str, date, date], Optional[List[str]]]
-        Callback invoked when the user clicks "Generate".
-        Receives (generator_type, start_date, end_date).
-        Returns list of numeric column names or None on error.
-
-    on_plot_features : Callable[[List[str]], None]
-        Callback invoked when the user clicks "Plot" in features section.
-        Receives the list of selected column names.
-
-    on_delete_selected : Callable[[], None]
-        Callback invoked when the user clicks "Delete selected".
-
-    on_delete_all : Callable[[], None]
-        Callback invoked when the user clicks "Delete all".
-
-    translator : Translator
-        Localization service.
+    Авторы: Черкащенко Д.Д., Ловчиков С.О., Андреева М.А.
     """
 
     def __init__(
@@ -69,12 +41,18 @@ class ContextPanel(ttk.Frame):
         on_import_csv: Callable[[], None],
         on_export_csv: Callable[[], None],
         on_run_analysis: Callable[[date, date, str], None],
-        on_generate_features: Callable[[str, date, date], Optional[List[str]]],
+        on_generate_features: Callable[
+            [str, date, date], Optional[List[str]]
+        ],
         on_plot_features: Callable[[List[str]], None],
         on_delete_selected: Callable[[], None],
         on_delete_all: Callable[[], None],
         translator: Translator
     ) -> None:
+        """Bind all callbacks and initialise instance variables.
+
+        Авторы: Черкащенко Д.Д., Ловчиков С.О., Андреева М.А.
+        """
         super().__init__(parent)
 
         self.ui_factory = ui_factory
@@ -106,19 +84,10 @@ class ContextPanel(ttk.Frame):
         min_date: Optional[date] = None,
         max_date: Optional[date] = None,
     ) -> None:
-        """
-        Render controls for the requested section.
+        """Render controls for section ('data'/'analysis'/'features').
 
-        Parameters
-        ----------
-        section : str
-            Active application section identifier.
-        min_date : date, optional
-            Earliest available date in the database (pre-fills start picker).
-        max_date : date, optional
-            Latest available date in the database (pre-fills end picker).
+        Авторы: Черкащенко Д.Д., Ловчиков С.О., Андреева М.А.
         """
-
         self._stats_area = None
         for widget in self.winfo_children():
             widget.destroy()
@@ -131,6 +100,7 @@ class ContextPanel(ttk.Frame):
             self._build_features(min_date=min_date, max_date=max_date)
 
     def _build_data(self) -> None:
+        """Build data management section controls."""
         ttk.Label(
             master=self,
             text="Data management"
@@ -153,72 +123,27 @@ class ContextPanel(ttk.Frame):
         min_date: Optional[date] = None,
         max_date: Optional[date] = None,
     ) -> None:
+        """Build analysis controls via build_analysis_form.
+
+        Авторы: Черкащенко Д.Д., Ловчиков С.О., Андреева М.А.
         """
-        Build analysis section controls: date pickers, chart type, plot button.
-        Year is selected inside the CalendarPopup via its built-in spinbox.
-        """
-
-        ttk.Label(
-            master=self,
-            text="Analysis parameters"
-        ).grid(row=0, column=0, columnspan=2, sticky="w", pady=(0, 8))
-
-        form = ttk.Frame(master=self)
-        form.grid(row=1, column=0, sticky="w")
-        form.columnconfigure(1, weight=1)
-
-        today = date.today()
-        start_initial = min_date if min_date is not None else date(today.year, 1, 1)
-        end_initial = max_date if max_date is not None else today
-
-        # --- Start date ---
-        ttk.Label(master=form, text="Start date").grid(
-            row=0, column=0, sticky="w", padx=(0, 8), pady=3
+        (
+            self._start_picker,
+            self._end_picker,
+            self._chart_type_var,
+        ) = build_analysis_form(
+            panel=self,
+            ui_factory=self.ui_factory,
+            min_date=min_date,
+            max_date=max_date,
+            on_plot_click=self._on_plot_click,
         )
-        self._start_picker = DatePickerEntry(
-            parent=form,
-            initial_date=start_initial,
-        )
-        self._start_picker.grid(row=0, column=1, sticky="w", pady=3)
-
-        # --- End date ---
-        ttk.Label(master=form, text="End date").grid(
-            row=1, column=0, sticky="w", padx=(0, 8), pady=3
-        )
-        self._end_picker = DatePickerEntry(
-            parent=form,
-            initial_date=end_initial,
-        )
-        self._end_picker.grid(row=1, column=1, sticky="w", pady=3)
-
-        ttk.Separator(form, orient="horizontal").grid(
-            row=2, column=0, columnspan=2, sticky="ew", pady=(6, 4)
-        )
-
-        # --- Chart type ---
-        ttk.Label(master=form, text="Chart type").grid(
-            row=3, column=0, sticky="w", padx=(0, 8), pady=3
-        )
-        chart_types = ["Candlestick", "Line", "Scatter", "Box", "Histogram"]
-        self._chart_type_var = ttk.Combobox(
-            master=form,
-            values=chart_types,
-            state="readonly",
-            width=12,
-        )
-        self._chart_type_var.set(chart_types[0])
-        self._chart_type_var.grid(row=3, column=1, sticky="w", pady=3)
-
-        # --- Plot button ---
-        self.ui_factory.text_button(
-            parent=form,
-            text="Plot",
-            command=self._on_plot_click,
-        ).grid(row=4, column=0, columnspan=2, sticky="w", pady=(10, 0))
 
     def _on_plot_click(self) -> None:
-        """Validate inputs and invoke the analysis callback."""
+        """Validate inputs and invoke the analysis callback.
 
+        Авторы: Черкащенко Д.Д., Ловчиков С.О., Андреева М.А.
+        """
         if self._start_picker is None or self._end_picker is None:
             return
 
@@ -244,68 +169,32 @@ class ContextPanel(ttk.Frame):
         min_date: Optional[date] = None,
         max_date: Optional[date] = None,
     ) -> None:
-        """
-        Build features section controls: generator selector, date range,
-        generate button, and (after generation) column selector with plot button.
-        """
+        """Build features controls via build_features_form.
 
+        Авторы: Черкащенко Д.Д., Ловчиков С.О., Андреева М.А.
+        """
         self._feat_column_frame = None
         self._features_listbox = None
         self._feat_df_columns = []
 
-        ttk.Label(
-            master=self,
-            text="Feature generation"
-        ).grid(row=0, column=0, columnspan=2, sticky="w", pady=(0, 8))
-
-        form = ttk.Frame(master=self)
-        form.grid(row=1, column=0, sticky="w")
-        form.columnconfigure(1, weight=1)
-        self._feat_form = form
-
-        today = date.today()
-        start_initial = min_date if min_date is not None else date(today.year, 1, 1)
-        end_initial = max_date if max_date is not None else today
-
-        ttk.Label(master=form, text="Generator").grid(
-            row=0, column=0, sticky="w", padx=(0, 8), pady=3
+        (
+            self._feat_start_picker,
+            self._feat_end_picker,
+            self._feat_generator_var,
+        ) = build_features_form(
+            panel=self,
+            ui_factory=self.ui_factory,
+            min_date=min_date,
+            max_date=max_date,
+            on_generate_click=self._on_generate_click,
         )
-        generator_options = ["Moving Averages", "Returns", "Technical Indicators"]
-        self._feat_generator_var = ttk.Combobox(
-            master=form,
-            values=generator_options,
-            state="readonly",
-            width=18,
-        )
-        self._feat_generator_var.set(generator_options[0])
-        self._feat_generator_var.grid(row=0, column=1, sticky="w", pady=3)
-
-        ttk.Label(master=form, text="Start date").grid(
-            row=1, column=0, sticky="w", padx=(0, 8), pady=3
-        )
-        self._feat_start_picker = DatePickerEntry(
-            parent=form,
-            initial_date=start_initial,
-        )
-        self._feat_start_picker.grid(row=1, column=1, sticky="w", pady=3)
-
-        ttk.Label(master=form, text="End date").grid(
-            row=2, column=0, sticky="w", padx=(0, 8), pady=3
-        )
-        self._feat_end_picker = DatePickerEntry(
-            parent=form,
-            initial_date=end_initial,
-        )
-        self._feat_end_picker.grid(row=2, column=1, sticky="w", pady=3)
-
-        self.ui_factory.text_button(
-            parent=form,
-            text="Generate",
-            command=self._on_generate_click,
-        ).grid(row=3, column=0, columnspan=2, sticky="w", pady=(10, 0))
 
     def _on_generate_click(self) -> None:
-        if self._feat_start_picker is None or self._feat_end_picker is None:
+        """Validate inputs, invoke generate callback, show column selector."""
+        if (
+            self._feat_start_picker is None
+            or self._feat_end_picker is None
+        ):
             return
 
         start = self._feat_start_picker.get_date()
@@ -337,59 +226,38 @@ class ContextPanel(ttk.Frame):
             self._stats_area = None
 
         self._feat_column_frame = ttk.Frame(self)
-        self._feat_column_frame.grid(row=2, column=0, sticky="nsew", pady=(8, 0))
-
-        ttk.Separator(self._feat_column_frame, orient="horizontal").pack(
-            fill="x", pady=(0, 6)
-        )
-        ttk.Label(master=self._feat_column_frame, text="Columns to plot").pack(
-            anchor="w"
+        self._feat_column_frame.grid(
+            row=2, column=0, sticky="nsew", pady=(8, 0)
         )
 
-        list_frame = ttk.Frame(self._feat_column_frame)
-        list_frame.pack(fill="both", expand=True)
+        ttk.Separator(
+            self._feat_column_frame, orient="horizontal"
+        ).pack(fill="x", pady=(0, 6))
+        ttk.Label(
+            master=self._feat_column_frame, text="Columns to plot"
+        ).pack(anchor="w")
 
         style = ttk.Style()
-        bg = style.lookup("TFrame", "background") or "#ffffff"
-        fg = style.lookup("TLabel", "foreground") or "#000000"
-        sel_bg = style.lookup("TButton", "background") or "#d0d0d0"
-
-        scrollbar = ttk.Scrollbar(list_frame, orient="vertical")
-        self._features_listbox = tk.Listbox(
-            list_frame,
-            selectmode="multiple",
-            yscrollcommand=scrollbar.set,
-            height=8,
-            exportselection=False,
-            background=bg,
-            foreground=fg,
-            selectbackground=sel_bg,
-            selectforeground=fg,
-            borderwidth=0,
-            highlightthickness=1,
-            highlightbackground=style.lookup("TSeparator", "background") or bg,
-            relief="flat",
+        self._features_listbox = build_column_selector(
+            parent_frame=self._feat_column_frame,
+            columns=columns,
+            style=style,
+            ui_factory=self.ui_factory,
+            on_plot_click=self._on_plot_features_click,
         )
-        scrollbar.config(command=self._features_listbox.yview)
-
-        for col in columns:
-            self._features_listbox.insert("end", col)
-
-        self._features_listbox.pack(side="left", fill="both", expand=True)
-        scrollbar.pack(side="right", fill="y")
-
-        self.ui_factory.text_button(
-            parent=self._feat_column_frame,
-            text="Plot",
-            command=self._on_plot_features_click,
-        ).pack(anchor="w", pady=(8, 0))
 
     def _on_plot_features_click(self) -> None:
-        if self._features_listbox is None or not self._feat_df_columns:
+        """Read selected columns from listbox and invoke plot callback."""
+        if (
+            self._features_listbox is None
+            or not self._feat_df_columns
+        ):
             return
 
         selected_indices = self._features_listbox.curselection()
-        selected_columns = [self._feat_df_columns[i] for i in selected_indices]
+        selected_columns = [
+            self._feat_df_columns[i] for i in selected_indices
+        ]
 
         if not selected_columns:
             return
@@ -403,15 +271,12 @@ class ContextPanel(ttk.Frame):
         stats_text: str,
         on_download: Optional[Callable[[], None]] = None,
     ) -> None:
-        """Render a stats block below the section controls (grid row 10)."""
+        """Render a stats block below section controls (row 10).
 
+        Авторы: Черкащенко Д.Д., Ловчиков С.О., Андреева М.А.
+        """
         if self._stats_area is not None:
             self._stats_area.destroy()
-
-        style = ttk.Style()
-        bg = style.lookup("TFrame", "background") or "#ffffff"
-        fg = style.lookup("TLabel", "foreground") or "#000000"
-        sep_color = style.lookup("TSeparator", "background") or bg
 
         frame = ttk.Frame(self)
         frame.grid(row=10, column=0, sticky="nsew", pady=(10, 0))
@@ -420,37 +285,8 @@ class ContextPanel(ttk.Frame):
         self.rowconfigure(10, weight=1)
         self._stats_area = frame
 
-        ttk.Separator(frame, orient="horizontal").grid(
-            row=0, column=0, columnspan=2, sticky="ew", pady=(0, 6)
+        build_stats_area(
+            parent=frame,
+            stats_text=stats_text,
+            on_download=on_download,
         )
-
-        text = tk.Text(
-            frame,
-            font=("Courier New", 9),
-            wrap="word",
-            relief="flat",
-            padx=6,
-            pady=4,
-            background=bg,
-            foreground=fg,
-            insertbackground=fg,
-            borderwidth=0,
-            highlightthickness=1,
-            highlightbackground=sep_color,
-            state="normal",
-        )
-        text.insert("1.0", stats_text)
-        text.config(state="disabled")
-        text.grid(row=1, column=0, sticky="nsew")
-
-        sb = ttk.Scrollbar(frame, orient="vertical", command=text.yview)
-        sb.grid(row=1, column=1, sticky="ns")
-        text.config(yscrollcommand=sb.set)
-
-        if on_download is not None:
-            ttk.Button(
-                frame,
-                text="Скачать отчёт",
-                command=on_download,
-            ).grid(row=2, column=0, columnspan=2, sticky="ew", pady=(6, 0))
-

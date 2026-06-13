@@ -10,6 +10,8 @@ features used throughout the analytics system, including:
 - momentum indicators;
 - volatility measures;
 - technical analysis indicators.
+
+Авторы: Черкащенко Д.Д., Ловчиков С.О., Андреева М.А.
 """
 
 
@@ -23,11 +25,7 @@ class AnalyticsFeatureNames:
     - base names for parameterized indicators;
     - helper methods for generating standardized feature names.
 
-    Notes
-    -----
-    Dynamic analytical features should always be generated using
-    the provided builder methods instead of manually formatting
-    strings inside feature generators.
+    Авторы: Черкащенко Д.Д., Ловчиков С.О., Андреева М.А.
     """
 
     # ==========================================
@@ -93,268 +91,108 @@ class AnalyticsFeatureNames:
 
     @classmethod
     def rolling_return(cls, window: int) -> str:
-        """
-        Construct rolling return feature name.
+        """Return column name for rolling return with given window.
 
-        Parameters
-        ----------
-        window : int
-            Size of the rolling window.
-
-        Returns
-        -------
-        str
-            Feature name in format:
-            ``rolling_return_{window}``.
-
-        Examples
-        --------
-        >>> AnalyticsFeatureNames.rolling_return(5)
-        'rolling_return_5'
+        Авторы: Черкащенко Д.Д., Ловчиков С.О., Андреева М.А.
         """
 
         return f"{cls.ROLLING_RETURN_BASE}_{window}"
 
     @classmethod
     def sma(cls, window: int) -> str:
-        """
-        Construct simple moving average feature name.
+        """Return column name for SMA with the given window.
 
-        Parameters
-        ----------
-        window : int
-            Moving average window size.
-
-        Returns
-        -------
-        str
-            Feature name in format:
-            ``sma_{window}``.
-
-        Examples
-        --------
-        >>> AnalyticsFeatureNames.sma(20)
-        'sma_20'
+        Авторы: Черкащенко Д.Д., Ловчиков С.О., Андреева М.А.
         """
 
         return f"{cls.SMA_BASE}_{window}"
 
     @classmethod
     def ema(cls, window: int) -> str:
-        """
-        Construct exponential moving average feature name.
+        """Return column name for EMA with the given window.
 
-        Parameters
-        ----------
-        window : int
-            Moving average window size.
-
-        Returns
-        -------
-        str
-            Feature name in format:
-            ``ema_{window}``.
-
-        Examples
-        --------
-        >>> AnalyticsFeatureNames.ema(10)
-        'ema_10'
+        Авторы: Черкащенко Д.Д., Ловчиков С.О., Андреева М.А.
         """
 
         return f"{cls.EMA_BASE}_{window}"
 
     @classmethod
     def vwma(cls, window: int) -> str:
-        """
-        Construct volume-weighted moving average feature name.
+        """Return column name for VWMA with the given window.
 
-        Parameters
-        ----------
-        window : int
-            Moving average window size.
-
-        Returns
-        -------
-        str
-            Feature name in format: ``vwma_{window}``.
+        Авторы: Черкащенко Д.Д., Ловчиков С.О., Андреева М.А.
         """
 
         return f"{cls.VWMA_BASE}_{window}"
 
     @classmethod
     def rsi(cls, window: int, method: str) -> str:
-        """
-        Construct Relative Strength Index feature name.
+        """Return column name for RSI with given window and method.
 
-        Parameters
-        ----------
-        window : int
-            RSI window size.
-
-        method : str
-            Calculation method identifier (e.g. "wilder").
-
-        Returns
-        -------
-        str
-            Feature name in format:
-            ``rsi_{method}_{window}``.
+        Авторы: Черкащенко Д.Д., Ловчиков С.О., Андреева М.А.
         """
 
         return f"{cls.RSI_BASE}_{method}_{window}"
 
     @classmethod
     def volatility(cls, window: int) -> str:
-        """
-        Construct volatility feature name.
+        """Return column name for volatility with the given window.
 
-        Parameters
-        ----------
-        window : int
-            Rolling window size.
-
-        Returns
-        -------
-        str
-            Feature name in format: ``volatility_{window}``.
+        Авторы: Черкащенко Д.Д., Ловчиков С.О., Андреева М.А.
         """
 
         return f"{cls.VOLATILITY_BASE}_{window}"
 
     @classmethod
     def momentum(cls, window: int) -> str:
-        """
-        Construct momentum feature name.
+        """Return column name for momentum with the given window.
 
-        Parameters
-        ----------
-        window : int
-            Window size.
-
-        Returns
-        -------
-        str
-            Feature name in format: ``momentum_{window}``.
+        Авторы: Черкащенко Д.Д., Ловчиков С.О., Андреева М.А.
         """
 
         return f"{cls.MOMENTUM_BASE}_{window}"
 
     @classmethod
     def bollinger_middle(cls, window: int) -> str:
-        """
-        Construct Bollinger Bands middle line feature name.
+        """Return column name for Bollinger middle band.
 
-        Parameters
-        ----------
-        window : int
-            Rolling window size used for the SMA baseline.
-
-        Returns
-        -------
-        str
-            Feature name in format:
-            ``bollinger_middle_{window}``.
-
-        Examples
-        --------
-        >>> AnalyticsFeatureNames.bollinger_middle(20)
-        'bollinger_middle_20'
+        Авторы: Черкащенко Д.Д., Ловчиков С.О., Андреева М.А.
         """
 
         return f"{cls.BOLLINGER_MIDDLE_BASE}_{window}"
 
     @classmethod
     def bollinger_upper(cls, window: int) -> str:
-        """
-        Construct Bollinger Bands upper band feature name.
+        """Return column name for Bollinger upper band.
 
-        Parameters
-        ----------
-        window : int
-            Rolling window size used for band calculation.
-
-        Returns
-        -------
-        str
-            Feature name in format:
-            ``bollinger_upper_{window}``.
-
-        Examples
-        --------
-        >>> AnalyticsFeatureNames.bollinger_upper(20)
-        'bollinger_upper_20'
+        Авторы: Черкащенко Д.Д., Ловчиков С.О., Андреева М.А.
         """
 
         return f"{cls.BOLLINGER_UPPER_BASE}_{window}"
 
     @classmethod
     def bollinger_lower(cls, window: int) -> str:
-        """
-        Construct Bollinger Bands lower band feature name.
+        """Return column name for Bollinger lower band.
 
-        Parameters
-        ----------
-        window : int
-            Rolling window size used for band calculation.
-
-        Returns
-        -------
-        str
-            Feature name in format:
-            ``bollinger_lower_{window}``.
-
-        Examples
-        --------
-        >>> AnalyticsFeatureNames.bollinger_lower(20)
-        'bollinger_lower_20'
+        Авторы: Черкащенко Д.Д., Ловчиков С.О., Андреева М.А.
         """
 
         return f"{cls.BOLLINGER_LOWER_BASE}_{window}"
 
     @classmethod
     def bollinger_bandwidth(cls, window: int) -> str:
-        """
-        Construct Bollinger Bands bandwidth feature name.
+        """Return column name for Bollinger bandwidth.
 
-        Parameters
-        ----------
-        window : int
-            Rolling window size used for band calculation.
-
-        Returns
-        -------
-        str
-            Feature name in format:
-            ``bollinger_bandwidth_{window}``.
-
-        Examples
-        --------
-        >>> AnalyticsFeatureNames.bollinger_bandwidth(20)
-        'bollinger_bandwidth_20'
+        Авторы: Черкащенко Д.Д., Ловчиков С.О., Андреева М.А.
         """
 
         return f"{cls.BOLLINGER_BANDWIDTH_BASE}_{window}"
 
     @classmethod
     def bollinger_percent_b(cls, window: int) -> str:
-        """
-        Construct Bollinger Bands %B feature name.
+        """Return column name for Bollinger percent B.
 
-        Parameters
-        ----------
-        window : int
-            Rolling window size used for band calculation.
-
-        Returns
-        -------
-        str
-            Feature name in format:
-            ``bollinger_percent_b_{window}``.
-
-        Examples
-        --------
-        >>> AnalyticsFeatureNames.bollinger_percent_b(20)
-        'bollinger_percent_b_20'
+        Авторы: Черкащенко Д.Д., Ловчиков С.О., Андреева М.А.
         """
 
         return f"{cls.BOLLINGER_PERCENT_B_BASE}_{window}"

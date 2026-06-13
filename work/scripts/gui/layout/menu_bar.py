@@ -11,6 +11,35 @@ from work.scripts.gui.views import SettingsMenu
 
 
 class MenuBar(ttk.Frame):
+    """
+    Application menu bar with File menu and settings/display icon buttons.
+
+    Parameters
+    ----------
+    parent : Tk
+        Root application window.
+    config : Config
+        Application configuration object.
+    ui_factory : UIFactory
+        Factory used to create themed UI controls.
+    on_toggle_panels : Callable[[], None]
+        Callback for the display toggle button.
+    on_import_csv : Callable[[], None]
+        Callback for the CSV import menu item.
+    on_export_csv : Callable[[], None]
+        Callback for the CSV export menu item.
+    translator : Translator
+        Localization service.
+    ui_settings : UISettings
+        Runtime UI configuration manager.
+
+    Авторы
+    ------
+    Черкащенко Данил Дмитриевич,
+    Ловчиков Станислав Олегович,
+    Андреева Мария Александровна
+    """
+
     def __init__(
         self,
         parent: Tk,
@@ -22,6 +51,34 @@ class MenuBar(ttk.Frame):
         translator: Translator,
         ui_settings: UISettings,
     ) -> None:
+        """
+        Initialize the menu bar and build its widgets.
+
+        Parameters
+        ----------
+        parent : Tk
+            Root application window.
+        config : Config
+            Application configuration object.
+        ui_factory : UIFactory
+            Factory used to create themed UI controls.
+        on_toggle_panels : Callable[[], None]
+            Callback for the display toggle button.
+        on_import_csv : Callable[[], None]
+            Callback for the CSV import menu item.
+        on_export_csv : Callable[[], None]
+            Callback for the CSV export menu item.
+        translator : Translator
+            Localization service.
+        ui_settings : UISettings
+            Runtime UI configuration manager.
+
+        Авторы
+        ------
+        Черкащенко Данил Дмитриевич,
+        Ловчиков Станислав Олегович,
+        Андреева Мария Александровна
+        """
         super().__init__(master=parent)
 
         self.config = config
@@ -42,6 +99,15 @@ class MenuBar(ttk.Frame):
         self._build()
 
     def _build(self) -> None:
+        """
+        Build the File menu button and the settings/display icon buttons.
+
+        Авторы
+        ------
+        Черкащенко Данил Дмитриевич,
+        Ловчиков Станислав Олегович,
+        Андреева Мария Александровна
+        """
         menu_bar = self.translator.get_data().menu_bar
 
         # ── left: File menu button ───────────────────────────────
@@ -90,14 +156,30 @@ class MenuBar(ttk.Frame):
         ).pack(side="right")
 
     def _post_file_menu(self) -> None:
+        """Pop up the File dropdown menu below the File button."""
         x = self.file_button.winfo_rootx()
         y = self.file_button.winfo_rooty() + self.file_button.winfo_height()
         self.file_menu.tk_popup(x, y)
 
     def _toggle_settings_menu(self) -> None:
+        """Show settings drop-down menu under the settings icon."""
         self.settings_menu.post_under(self.settings_button)
 
     def _get_font(self) -> Tuple[str, int]:
+        """
+        Return the menu font tuple based on current UI scale settings.
+
+        Returns
+        -------
+        tuple[str, int]
+            Font family and size.
+
+        Авторы
+        ------
+        Черкащенко Данил Дмитриевич,
+        Ловчиков Станислав Олегович,
+        Андреева Мария Александровна
+        """
         ui = self.config.user.ui
         scale = resolve_ui_scale(ui.scale)
         return (ui.font_family, scale.font_size)

@@ -7,15 +7,15 @@ used to control figure-level and chart-level rendering behavior.
 The configuration layer separates visual settings from rendering
 logic and is shared by plot layers, rendering backends, and session
 management components.
+
+Авторы: Черкащенко Д.Д., Ловчиков С.О., Андреева М.А.
 """
 
 
 from dataclasses import dataclass, field
 from typing import Tuple, Optional
 
-from .types import (
-    LineStyleLiteral
-)
+from .axis_config import AxisVisibilityConfig, ChartStyle
 
 
 @dataclass(slots=True)
@@ -36,103 +36,13 @@ class FigureConfig:
 
     tight_layout : bool
         Whether to automatically apply tight layout after rendering.
+
+    Авторы: Черкащенко Д.Д., Ловчиков С.О., Андреева М.А.
     """
 
     figsize: Optional[Tuple[float, float]] = None
     dpi: Optional[float] = None
     tight_layout: bool = False
-
-
-@dataclass(slots=True)
-class AxisVisibilityConfig:
-    """
-    Visibility configuration for chart elements.
-
-    Controls which visual components of a chart are rendered,
-    including titles, labels, ticks, grid, and legend.
-    """
-
-    # ------------------------------------------------------------------
-    # Visibility flags
-    # ------------------------------------------------------------------
-
-    show_title: bool = True
-
-    show_xlabel: bool = True
-    show_primary_ylabel: bool = True
-    show_overlay_ylabel: bool = True
-
-    show_xticks: bool = True
-    show_primary_yticks: bool = True
-    show_overlay_yticks: bool = True
-
-    show_grid: bool = True
-    show_legend: bool = True
-
-    # ------------------------------------------------------------------
-    # Public API
-    # ------------------------------------------------------------------
-
-    def reset(self) -> None:
-        """
-        Reset all visibility flags to their default values.
-
-        This restores the configuration to a fully visible chart state.
-        """
-
-        self.show_title = True
-
-        self.show_xlabel = True
-        self.show_primary_ylabel = True
-        self.show_overlay_ylabel = True
-
-        self.show_xticks = True
-        self.show_primary_yticks = True
-        self.show_overlay_yticks = True
-
-        self.show_grid = True
-        self.show_legend = True
-
-
-@dataclass(slots=True)
-class ChartStyle:
-    """
-    Styling configuration for chart-level appearance.
-
-    Defines global visual properties such as figure background,
-    axes background, and grid styling.
-    """
-
-    # ------------------------------------------------------------------
-    # Figure appearance
-    # ------------------------------------------------------------------
-
-    figure_facecolor: Optional[str] = None
-    axes_facecolor: Optional[str] = None
-
-    # ------------------------------------------------------------------
-    # Grid appearance
-    # ------------------------------------------------------------------
-
-    grid_color: str = "#B0B0B0"
-    grid_alpha: Optional[float] = None
-    grid_linestyle: LineStyleLiteral = '-'
-
-    # ------------------------------------------------------------------
-    # Public API
-    # ------------------------------------------------------------------
-
-    def reset(self) -> None:
-        """
-        Reset chart style to default Matplotlib-like appearance.
-        """
-
-        self.figure_facecolor = None
-        self.axes_facecolor = None
-
-        self.grid_color = "#B0B0B0"
-        self.grid_alpha = None
-        self.grid_linestyle = '-'
 
 
 @dataclass(slots=True)
@@ -148,6 +58,8 @@ class ChartConfig:
 
     It acts as the central configuration contract shared between
     plot sessions, renderers, and plot layers.
+
+    Авторы: Черкащенко Д.Д., Ловчиков С.О., Андреева М.А.
     """
 
     # ------------------------------------------------------------------

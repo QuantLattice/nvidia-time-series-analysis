@@ -11,41 +11,22 @@ This module provides a popup settings menu that allows the user to:
 """
 
 
-from dataclasses import dataclass
 import tkinter as tk
-from tkinter.ttk import Frame, Button, Style
+from tkinter.ttk import Frame, Button
 from tkinter import messagebox
-from typing import Callable, List
 
 from work.library.config import Config
 from work.scripts.gui.services.ui_settings import UISettings
 from work.scripts.gui.services.translator import Translator
-from work.scripts.gui.constants import ScaleTokensNames
-from work.scripts.gui.constants import resolve_ui_scale, LANGUAGES
-from work.scripts.gui.theme import ThemeName
+from work.scripts.gui.constants import resolve_ui_scale
 from work.scripts.gui.views.font_selector_popup import FontSelectorPopup
-
-
-@dataclass(frozen=True)
-class RadioItem:
-    """
-    Radio button menu item configuration.
-
-    Attributes
-    ----------
-    label : str
-        Display label shown in the menu.
-
-    value : str
-        Internal value associated with the menu item.
-
-    command : Callable[[], None]
-        Callback executed when the item is selected.
-    """
-
-    label: str
-    value: str
-    command: Callable[[], None]
+from work.scripts.gui.views.settings_menu_builders import (
+    build_language_menu,
+    build_scale_menu,
+    build_theme_menu,
+    build_ttk_theme_menu,
+    build_font_menu,
+)
 
 
 class SettingsMenu:
@@ -74,28 +55,6 @@ class SettingsMenu:
         translator: Translator,
         config: Config
     ) -> None:
-        """
-        Initialize settings menu and bind it to application state.
-
-        The constructor initializes internal state variables, creates
-        Tkinter StringVar bindings for reactive menu updates, constructs
-        the root menu widget, and builds all menu sections.
-
-        Parameters
-        ----------
-        parent : Frame
-            Parent Tkinter frame used as menu anchor.
-
-        ui_settings : UISettings
-            UI settings controller used to apply changes.
-
-        translator : Translator
-            Translation provider for localized labels.
-
-        config : Config
-            Application configuration instance used for initial values.
-        """
-
         self.parent = parent
         self.config = config
         self.ui_settings = ui_settings
@@ -122,9 +81,7 @@ class SettingsMenu:
     # --------------------------------
 
     def _build(self) -> None:
-        """
-        Build the complete settings menu structure.
-        """
+        """Build the complete settings menu structure."""
 
         self._build_language_menu()
         self._build_scale_menu()
@@ -134,29 +91,19 @@ class SettingsMenu:
         self._build_reset_button()
 
     def _build_language_menu(self) -> None:
-        """
-        Build the language selection submenu.
-        """
+        """Build the language selection submenu."""
 
-        language_menu = tk.Menu(master=self._menu, tearoff=False)
-
-        items = [
-            RadioItem(
-                label=label,
-                value=code,
-                command=lambda lang=code: self.ui_settings.set_language(lang)
-            )
-            for code, label in LANGUAGES.items()
-        ]
-
-        self._build_radio_group(
-            menu=language_menu,
-            variable=self.language_var,
-            items=items
-        )
-
+        font = self._get_font()
         language_menu_data = \
             self.translator.get_data().settings_menu.language_menu
+
+        language_menu = build_language_menu(
+            parent_menu=self._menu,
+            translator=self.translator,
+            ui_settings=self.ui_settings,
+            font=font,
+            variable=self.language_var,
+        )
 
         self._menu.add_cascade(
             label=language_menu_data.label,
@@ -164,49 +111,18 @@ class SettingsMenu:
         )
 
     def _build_scale_menu(self) -> None:
-        """
-        Build the interface scale selection submenu.
-        """
+        """Build the interface scale selection submenu."""
 
-        scale_menu = tk.Menu(master=self._menu, tearoff=False)
+        font = self._get_font()
+        scale_menu_data = \
+            self.translator.get_data().settings_menu.scale_menu
 
-        scale_menu_data = self.translator.get_data().settings_menu.scale_menu
-
-        items = [
-            RadioItem(
-                label=scale_menu_data.small_label,
-                value=ScaleTokensNames.SMALL,
-                command=lambda: self.ui_settings.set_scale(
-                    ScaleTokensNames.SMALL
-                )
-            ),
-            RadioItem(
-                label=scale_menu_data.medium_label,
-                value=ScaleTokensNames.MEDIUM,
-                command=lambda: self.ui_settings.set_scale(
-                    ScaleTokensNames.MEDIUM
-                )
-            ),
-            RadioItem(
-                label=scale_menu_data.big_label,
-                value=ScaleTokensNames.BIG,
-                command=lambda: self.ui_settings.set_scale(
-                    ScaleTokensNames.BIG
-                )
-            ),
-            RadioItem(
-                label=scale_menu_data.very_big_label,
-                value=ScaleTokensNames.VERY_BIG,
-                command=lambda: self.ui_settings.set_scale(
-                    ScaleTokensNames.VERY_BIG
-                )
-            ),
-        ]
-
-        self._build_radio_group(
-            menu=scale_menu,
+        scale_menu = build_scale_menu(
+            parent_menu=self._menu,
+            translator=self.translator,
+            ui_settings=self.ui_settings,
+            font=font,
             variable=self.scale_var,
-            items=items
         )
 
         self._menu.add_cascade(
@@ -215,31 +131,18 @@ class SettingsMenu:
         )
 
     def _build_theme_menu(self) -> None:
-        """
-        Build the application theme selection submenu.
-        """
+        """Build the application theme selection submenu."""
 
-        theme_menu = tk.Menu(master=self._menu, tearoff=False)
+        font = self._get_font()
+        theme_menu_data = \
+            self.translator.get_data().settings_menu.theme_menu
 
-        theme_menu_data = self.translator.get_data().settings_menu.theme_menu
-
-        items = [
-            RadioItem(
-                label=theme_menu_data.light_label,
-                value=ThemeName.LIGHT,
-                command=lambda: self.ui_settings.set_theme(ThemeName.LIGHT)
-            ),
-            RadioItem(
-                label=theme_menu_data.dark_label,
-                value=ThemeName.DARK,
-                command=lambda: self.ui_settings.set_theme(ThemeName.DARK)
-            ),
-        ]
-
-        self._build_radio_group(
-            menu=theme_menu,
+        theme_menu = build_theme_menu(
+            parent_menu=self._menu,
+            translator=self.translator,
+            ui_settings=self.ui_settings,
+            font=font,
             variable=self.theme_var,
-            items=items
         )
 
         self._menu.add_cascade(
@@ -248,30 +151,17 @@ class SettingsMenu:
         )
 
     def _build_ttk_theme_menu(self) -> None:
-        """
-        Build the ttk theme selection submenu.
-        """
+        """Build the ttk theme selection submenu."""
 
-        ttk_theme_menu = tk.Menu(master=self._menu, tearoff=False)
-
+        font = self._get_font()
         ttk_theme_menu_data = \
             self.translator.get_data().settings_menu.ttk_theme_menu
 
-        available_themes = Style().theme_names()
-
-        items = [
-            RadioItem(
-                label=theme,
-                value=theme,
-                command=lambda t=theme: self.ui_settings.set_ttk_theme(t)
-            )
-            for theme in available_themes
-        ]
-
-        self._build_radio_group(
-            menu=ttk_theme_menu,
+        ttk_theme_menu = build_ttk_theme_menu(
+            parent_menu=self._menu,
+            ui_settings=self.ui_settings,
+            font=font,
             variable=self.ttk_theme_var,
-            items=items
         )
 
         self._menu.add_cascade(
@@ -280,27 +170,27 @@ class SettingsMenu:
         )
 
     def _build_font_menu(self) -> None:
-        """
-        Build the font settings submenu.
-        """
+        """Build the font settings submenu."""
 
-        font_menu = tk.Menu(master=self._menu, tearoff=False)
+        font = self._get_font()
+        font_menu_data = \
+            self.translator.get_data().settings_menu.font_menu
 
-        self._apply_menu_style(menu=font_menu)
-
-        font_menu_data = self.translator.get_data().settings_menu.font_menu
-
-        font_menu.add_command(
-            label=font_menu_data.command_label,
-            command=self._open_font_selector
+        font_menu = build_font_menu(
+            parent_menu=self._menu,
+            translator=self.translator,
+            ui_settings=self.ui_settings,
+            font=font,
+            open_selector_callback=self._open_font_selector,
         )
 
-        self._menu.add_cascade(label=font_menu_data.label, menu=font_menu)
+        self._menu.add_cascade(
+            label=font_menu_data.label,
+            menu=font_menu
+        )
 
     def _build_reset_button(self) -> None:
-        """
-        Build the settings reset command.
-        """
+        """Build the settings reset command."""
 
         self._menu.add_separator()
 
@@ -317,9 +207,7 @@ class SettingsMenu:
     # --------------------------------
 
     def _on_reset(self) -> None:
-        """
-        Reset interface settings after user confirmation.
-        """
+        """Reset interface settings after user confirmation."""
 
         reset_buttong_data = \
             self.translator.get_data().settings_menu.reset_button
@@ -335,9 +223,7 @@ class SettingsMenu:
         self.ui_settings.reset()
 
     def _open_font_selector(self) -> None:
-        """
-        Open the font selection popup window.
-        """
+        """Open the font selection popup window."""
 
         anchor = getattr(self, "_anchor", self.parent)  # type: ignore
         anchor: Button
@@ -355,36 +241,12 @@ class SettingsMenu:
     # HELPERS
     # --------------------------------
 
-    def _build_radio_group(
-        self,
-        menu: tk.Menu,
-        variable: tk.StringVar,
-        items: List[RadioItem]
-    ) -> None:
-        """
-        Build a radio button group inside a menu.
+    def _get_font(self) -> tuple:
+        """Return the current UI font tuple ``(family, size)``."""
 
-        Parameters
-        ----------
-        menu : tk.Menu
-            Target menu widget.
-
-        variable : tk.StringVar
-            Tkinter variable bound to the radio group.
-
-        items : List[RadioItem]
-            Radio button configuration items.
-        """
-
-        self._apply_menu_style(menu=menu)
-
-        for item in items:
-            menu.add_radiobutton(
-                label=item.label,
-                variable=variable,
-                value=item.value,
-                command=item.command,
-            )
+        ui = self.config.user.ui
+        scale = resolve_ui_scale(ui.scale)
+        return (ui.font_family, scale.font_size)
 
     def _apply_menu_style(
         self,
@@ -399,12 +261,7 @@ class SettingsMenu:
             Target menu widget.
         """
 
-        ui = self.config.user.ui
-        scale = resolve_ui_scale(ui.scale)
-
-        menu.configure(
-            font=(ui.font_family, scale.font_size),
-        )
+        menu.configure(font=self._get_font())
 
     # --------------------------------
     # PUBLIC

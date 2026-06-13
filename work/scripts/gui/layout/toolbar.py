@@ -35,6 +35,12 @@ class ToolBar(ttk.Frame):
 
     translator : Translator
         Localization service used for tooltip text.
+
+    Авторы
+    ------
+    Черкащенко Данил Дмитриевич,
+    Ловчиков Станислав Олегович,
+    Андреева Мария Александровна
     """
 
     def __init__(
@@ -64,6 +70,12 @@ class ToolBar(ttk.Frame):
 
         translator : Translator
             Localization service used for tooltip text.
+
+        Авторы
+        ------
+        Черкащенко Данил Дмитриевич,
+        Ловчиков Станислав Олегович,
+        Андреева Мария Александровна
         """
 
         super().__init__(master=parent)
@@ -78,6 +90,12 @@ class ToolBar(ttk.Frame):
     def _build(self) -> None:
         """
         Build toolbar buttons.
+
+        Авторы
+        ------
+        Черкащенко Данил Дмитриевич,
+        Ловчиков Станислав Олегович,
+        Андреева Мария Александровна
         """
 
         toolbar = self.translator.get_data().tool_bar

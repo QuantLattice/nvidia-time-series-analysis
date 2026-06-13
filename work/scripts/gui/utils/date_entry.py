@@ -23,6 +23,12 @@ class DatePickerEntry(ttk.Frame):
         Date shown on creation. Defaults to today.
     on_change : Optional[Callable[[date], None]]
         Called with the new date whenever the user picks one.
+
+    Авторы
+    ------
+    Черкащенко Данил Дмитриевич,
+    Ловчиков Станислав Олегович,
+    Андреева Мария Александровна
     """
 
     def __init__(
@@ -32,6 +38,26 @@ class DatePickerEntry(ttk.Frame):
         on_change: Optional[Callable[[date], None]] = None,
         **frame_kwargs,
     ) -> None:
+        """
+        Initialize the date picker entry widget.
+
+        Parameters
+        ----------
+        parent : tk.Widget
+            Parent widget.
+        initial_date : date, optional
+            Date shown on creation. Defaults to today.
+        on_change : Callable[[date], None], optional
+            Called with the new date whenever the user picks one.
+        **frame_kwargs
+            Additional keyword arguments forwarded to ttk.Frame.
+
+        Авторы
+        ------
+        Черкащенко Данил Дмитриевич,
+        Ловчиков Станислав Олегович,
+        Андреева Мария Александровна
+        """
         super().__init__(parent, **frame_kwargs)
 
         self._date = initial_date or date.today()
@@ -51,14 +77,42 @@ class DatePickerEntry(ttk.Frame):
     # ------------------------------------------------------------------
 
     def get_date(self) -> Optional[date]:
-        """Return the currently displayed date, or None if the text is invalid."""
+        """
+        Return the currently displayed date, or None if the text is invalid.
+
+        Returns
+        -------
+        date | None
+            Parsed date, or None if the entry text is not a valid ISO date.
+
+        Авторы
+        ------
+        Черкащенко Данил Дмитриевич,
+        Ловчиков Станислав Олегович,
+        Андреева Мария Александровна
+        """
         try:
-            return datetime.strptime(self._var.get().strip(), "%Y-%m-%d").date()
+            return datetime.strptime(
+                self._var.get().strip(), "%Y-%m-%d"
+            ).date()
         except ValueError:
             return None
 
     def set_date(self, d: date) -> None:
-        """Set the date value programmatically without firing on_change."""
+        """
+        Set the date value programmatically without firing on_change.
+
+        Parameters
+        ----------
+        d : date
+            New date value.
+
+        Авторы
+        ------
+        Черкащенко Данил Дмитриевич,
+        Ловчиков Станислав Олегович,
+        Андреева Мария Александровна
+        """
         self._date = d
         self._var.set(d.isoformat())
 
@@ -67,6 +121,7 @@ class DatePickerEntry(ttk.Frame):
     # ------------------------------------------------------------------
 
     def _open_popup(self) -> None:
+        """Open the CalendarPopup for visual date selection."""
         from work.scripts.gui.views.calendar_popup import CalendarPopup
 
         CalendarPopup(
@@ -76,6 +131,7 @@ class DatePickerEntry(ttk.Frame):
         )
 
     def _on_selected(self, d: date) -> None:
+        """Update entry value and fire on_change when date is chosen."""
         self._date = d
         self._var.set(d.isoformat())
         if self._on_change is not None:

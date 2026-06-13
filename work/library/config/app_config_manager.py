@@ -1,14 +1,13 @@
 """
-Application configuration manager and typed configuration models.
+Application configuration manager.
 
-This module provides:
-- immutable dataclass-based configuration models;
-- JSON configuration loading utilities;
-- automatic fallback to default configuration files;
-- serialization and persistence of application settings.
+This module provides utilities for loading, validating, and
+persisting application configuration files.
 
 The configuration system is used by GUI, analysis, reporting,
 and infrastructure layers of the application.
+
+Авторы: Черкащенко Д.Д., Ловчиков С.О., Андреева М.А.
 """
 
 
@@ -17,166 +16,24 @@ from typing import (
     Any,
     Dict,
     Optional,
-    Tuple,
     Union
 )
-from dataclasses import (
-    dataclass,
-    asdict
-)
+from dataclasses import asdict
 
 from work.library.utils import (
     load,
     save
 )
+from work.library.config.app_config_models import (
+    App,
+    Paths,
+    Assets,
+    Reports,
+    Analysis,
+    AppConfig
+)
 
-
-@dataclass(slots=True)
-class App:
-    """
-    General application metadata.
-
-    Attributes
-    ----------
-    title : str
-        Main application window title.
-    """
-
-    title: str
-
-
-@dataclass(slots=True)
-class Paths:
-    """
-    File system paths used by the application.
-
-    Attributes
-    ----------
-    data_dir : str
-        Path to the input dataset directory.
-
-    output_dir : str
-        Path to the directory for exported reports and tables.
-
-    graphics_dir : str
-        Path to the directory for generated charts and figures.
-
-    logs_dir : str
-        Path to the application log directory.
-    """
-
-    data_dir: str
-    output_dir: str
-    graphics_dir: str
-    logs_dir: str
-
-
-@dataclass(slots=True)
-class Assets:
-    """
-    Graphical asset paths used by the GUI.
-
-    Attributes
-    ----------
-    app_icon : str
-        Main application icon path.
-
-    data_icon : str
-        Icon used for data-related sections.
-
-    analysis_icon : str
-        Icon used for analysis sections.
-
-    reports_icon : str
-        Icon used for reporting sections.
-
-    settings_icon : str
-        Icon used for settings sections.
-
-    display_icon : str
-        Icon used for display and visualization sections.
-
-    logo : str
-        Application logo image path.
-    """
-
-    app_icon: str
-    data_icon: str
-    analysis_icon: str
-    reports_icon: str
-    settings_icon: str
-    display_icon: str
-    logo: str
-
-
-@dataclass(slots=True)
-class Reports:
-    """
-    Default report export settings.
-
-    Attributes
-    ----------
-    default_export_format : str
-        Default format for text report export.
-
-    default_chart_format : str
-        Default format for chart export.
-    """
-
-    default_export_format: str
-    default_chart_format: str
-
-
-@dataclass(slots=True)
-class Analysis:
-    """Analysis parameter settings.
-
-    Attributes
-    ----------
-    sma_windows : Tuple[int, int]
-        Window sizes for simple moving averages.
-    ema_windows : Tuple[int, int]
-        Window sizes for exponential moving averages.
-    volatility_window : int
-        Rolling window size used for volatility calculation.
-    forecast_horizon : int
-        Number of future steps used in forecasting.
-    """
-
-    sma_windows: Tuple[int, int]
-    ema_windows: Tuple[int, int]
-    volatility_window: int
-    forecast_horizon: int
-
-
-@dataclass(slots=True)
-class AppConfig:
-    """
-    Complete typed application configuration.
-
-    Attributes
-    ----------
-    app : App
-        General application metadata.
-
-    paths : Paths
-        File system path configuration.
-
-    assets : Assets
-        GUI asset configuration.
-
-    reports : Reports
-        Report export settings.
-
-    analysis : Analysis
-        Statistical analysis and forecasting parameters.
-    """
-
-    app: App
-    paths: Paths
-    assets: Assets
-    reports: Reports
-    analysis: Analysis
+__all__ = ['AppConfigManager', 'AppConfig']
 
 
 class AppConfigManager:
@@ -186,11 +43,12 @@ class AppConfigManager:
     The loader reads JSON configuration files and converts raw
     dictionary data into immutable typed dataclass objects.
 
+    Авторы: Черкащенко Д.Д., Ловчиков С.О., Андреева М.А.
+
     Parameters
     ----------
     config_path : Optional[Union[str, Path]], optional
         Path to the main application configuration file.
-
     default_path : Optional[Union[str, Path]], optional
         Path to the fallback default configuration file.
     """
@@ -207,7 +65,6 @@ class AppConfigManager:
         ----------
         config_path : Optional[Union[str, Path]], optional
             Path to the user application configuration file.
-
         default_path : Optional[Union[str, Path]], optional
             Path to the default fallback configuration file.
         """
@@ -297,8 +154,6 @@ class AppConfigManager:
             config = self.config
 
         self.config_path.parent.mkdir(parents=True, exist_ok=True)
-        save(path=self.config_path, data=asdict(config))
-
         save(
             path=self.config_path,
             data=asdict(config)
@@ -327,8 +182,12 @@ class AppConfigManager:
             analysis=Analysis(
                 sma_windows=tuple(raw["analysis"]["sma_windows"]),
                 ema_windows=tuple(raw["analysis"]["ema_windows"]),
-                volatility_window=raw["analysis"]["volatility_window"],
-                forecast_horizon=raw["analysis"]["forecast_horizon"],
+                volatility_window=(
+                    raw["analysis"]["volatility_window"]
+                ),
+                forecast_horizon=(
+                    raw["analysis"]["forecast_horizon"]
+                ),
             ),
         )
 
@@ -355,7 +214,8 @@ class AppConfigManager:
 
         if not self.default_path.exists():
             raise FileNotFoundError(
-                f"Default app config not found: {self.default_path}"
+                f"Default app config not found: "
+                f"{self.default_path}"
             )
 
         return load(self.default_path)

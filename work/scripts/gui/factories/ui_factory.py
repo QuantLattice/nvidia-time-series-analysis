@@ -18,7 +18,6 @@ from tkinter import ttk, Widget
 from PIL.ImageTk import PhotoImage
 from typing import (
     Optional,
-    Union,
     Tuple,
     Dict,
     Any,
@@ -29,12 +28,13 @@ from work.library.utils import ImageLoader
 from work.library.config import Config
 
 from work.scripts.gui.utils import ToolTip
-from work.scripts.gui.constants import resolve_ui_scale
 from work.scripts.gui.services import UIBinder
-from work.scripts.gui.theme import THEMES, ThemeName
+from work.scripts.gui.factories.ui_factory_state_mixin import (
+    UIFactoryStateMixin,
+)
 
 
-class UIFactory():
+class UIFactory(UIFactoryStateMixin):
     """
     Factory for reusable themed Tkinter widgets.
 
@@ -252,60 +252,3 @@ class UIFactory():
         )
 
         return entry
-
-    def set_theme(self, theme_name: str) -> None:
-        """
-        Set active GUI theme tokens.
-
-        Parameters
-        ----------
-        theme_name : str
-            Theme identifier.
-        """
-
-        self.colors = THEMES[ThemeName(theme_name)]
-
-    def set_scale(
-        self,
-        scale: str
-    ) -> None:
-        """
-        Set active GUI scaling configuration.
-
-        Parameters
-        ----------
-        scale : str
-            Scale preset identifier.
-        """
-
-        self.scale = resolve_ui_scale(scale_name=scale)
-        self.set_icon_size(size=self.scale.icon_size)
-
-    def set_icon_size(
-        self,
-        size: Union[int, Tuple[int, int]]
-    ) -> None:
-        """
-        Set default image scaling size.
-
-        Parameters
-        ----------
-        size : Union[int, tuple[int, int]]
-            Target icon size.
-        """
-
-        self.image_loader.set_default_size(size=size)
-
-    def update(self):
-        """
-        Refresh internal factory resources.
-        """
-
-        self._clear_cache()
-
-    def _clear_cache(self):
-        """
-        Clear cached image resources.
-        """
-
-        self._image_cache.clear()

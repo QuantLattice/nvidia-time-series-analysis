@@ -20,6 +20,9 @@ from work.scripts.gui.constants import (
     FONT_SELECTOR_POPUP_SIZE,
     resolve_ui_scale
 )
+from work.scripts.gui.views.font_selector_layout import (
+    build_font_selector_widgets,
+)
 
 
 class FontSelectorPopup(tk.Toplevel):
@@ -122,101 +125,26 @@ class FontSelectorPopup(tk.Toplevel):
     # BUILD
     # --------------------------------
 
-    def _build(
-        self,
-        current_font: str
-    ) -> None:
-        """
-        Build and initialize popup widgets.
+    def _build(self, current_font: str) -> None:
+        """Build and initialize popup widgets."""
 
-        Parameters
-        ----------
-        current_font : str
-            Currently selected font family.
-        """
-
-        container = ttk.Frame(self)
-        container.pack(fill="both", expand=True, padx=10, pady=10)
-
-        self.search_var = tk.StringVar()
-
-        search_entry = ttk.Entry(container, textvariable=self.search_var)
-        search_entry.configure(font=self._get_font())
-
-        search_entry.pack(fill="x", pady=(0, 10))
-        search_entry.bind(
-            sequence="<KeyRelease>",
-            func=self._filter_fonts
+        self.listbox, self.preview, self.search_var = (
+            build_font_selector_widgets(
+                popup=self,
+                fonts=self.filtered_fonts,
+                current_font=current_font,
+                example_text=self.example_text,
+                apply_text=self.apply_text,
+                on_select=self._on_select,
+                on_apply=self._apply,
+                on_filter=self._filter_fonts,
+                colors=self.colors,
+                get_font_fn=self._get_font,
+            )
         )
-
-        list_frame = ttk.Frame(master=container)
-        list_frame.pack(fill="both", expand=True)
-
-        scrollbar = ttk.Scrollbar(master=list_frame, orient="vertical")
-        scrollbar.pack(side="right", fill="y")
-
-        self.listbox = tk.Listbox(
-            master=list_frame,
-            yscrollcommand=scrollbar.set,
-            exportselection=False,
-        )
-
-        font = (
-            "Segoe UI",
-            self._get_font()[1]
-        )
-
-        self.listbox.configure(
-            bg=self.colors.surface,
-            fg=self.colors.text,
-            selectbackground=self.colors.accent,
-            selectforeground=self.colors.button_text,
-            highlightthickness=0,
-            font=font
-        )
-        self.listbox.pack(side="left", fill="both", expand=True)
-
-        scrollbar.config(command=self.listbox.yview)  # type: ignore
-
-        self.preview = tk.Text(master=container, height=4, wrap="word")
-
-        self.preview.configure(
-            bg=self.colors.surface,
-            fg=self.colors.text,
-            insertbackground=self.colors.text,
-            highlightthickness=0,
-        )
-        self.preview.pack(fill="x", pady=10)
-
-        self.preview.insert(index="1.0", chars=self.example_text)
-        self.preview.config(state="disabled")
-
-        ttk.Button(
-            master=container,
-            text=self.apply_text,
-            command=self._apply,
-        ).pack(fill="x")
-
-        self._fill()
 
         if current_font in self.fonts:
-            index = self.fonts.index(current_font)
-            self.listbox.selection_set(first=index)
-            self.listbox.see(index=index)
             self._update_preview(font_name=current_font)
-
-        self.listbox.bind(
-            sequence="<<ListboxSelect>>",
-            func=self._on_select
-        )
-        self.listbox.bind(
-            sequence="<Double-Button-1>",
-            func=self._apply
-        )
-        self.listbox.bind(
-            sequence="<Return>",
-            func=self._apply
-        )
 
     def _fill(self) -> None:
         """

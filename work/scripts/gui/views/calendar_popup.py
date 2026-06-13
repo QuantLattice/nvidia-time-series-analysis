@@ -30,6 +30,12 @@ class CalendarPopup(tk.Toplevel):
         Date highlighted when the popup opens. Defaults to today.
     on_select : Optional[Callable[[date], None]]
         Called with the chosen date when the user clicks a day.
+
+    Авторы
+    ------
+    Черкащенко Данил Дмитриевич,
+    Ловчиков Станислав Олегович,
+    Андреева Мария Александровна
     """
 
     def __init__(
@@ -38,6 +44,24 @@ class CalendarPopup(tk.Toplevel):
         initial_date: Optional[date] = None,
         on_select: Optional[Callable[[date], None]] = None,
     ) -> None:
+        """
+        Initialize and display the calendar popup.
+
+        Parameters
+        ----------
+        parent : tk.Widget
+            Parent widget used for positioning and modal grab.
+        initial_date : date, optional
+            Date highlighted when the popup opens. Defaults to today.
+        on_select : Callable[[date], None], optional
+            Called with the chosen date when the user clicks a day.
+
+        Авторы
+        ------
+        Черкащенко Данил Дмитриевич,
+        Ловчиков Станислав Олегович,
+        Андреева Мария Александровна
+        """
         super().__init__(parent)
 
         today = date.today()
@@ -59,6 +83,15 @@ class CalendarPopup(tk.Toplevel):
     # ------------------------------------------------------------------
 
     def _build(self) -> None:
+        """
+        Build the header (prev/month/year/next) and the day grid.
+
+        Авторы
+        ------
+        Черкащенко Данил Дмитриевич,
+        Ловчиков Станислав Олегович,
+        Андреева Мария Александровна
+        """
         header = ttk.Frame(self)
         header.pack(fill="x", padx=6, pady=(6, 2))
 
@@ -66,7 +99,7 @@ class CalendarPopup(tk.Toplevel):
             header, text="<", width=2, command=self._prev_month
         ).pack(side="left")
 
-        # Month label — fixed width so the popup doesn't resize while navigating
+        # Month label — fixed width so popup doesn't resize while navigating
         self._month_label = ttk.Label(header, text="", width=10, anchor="e")
         self._month_label.pack(side="left", padx=(4, 0))
 
@@ -93,6 +126,15 @@ class CalendarPopup(tk.Toplevel):
         self._render_grid()
 
     def _render_grid(self) -> None:
+        """
+        Redraw the day grid for the current month and year.
+
+        Авторы
+        ------
+        Черкащенко Данил Дмитриевич,
+        Ловчиков Станислав Олегович,
+        Андреева Мария Александровна
+        """
         for widget in self._grid_frame.winfo_children():
             widget.destroy()
 
@@ -129,6 +171,20 @@ class CalendarPopup(tk.Toplevel):
                 btn.grid(row=row_i, column=col_i, padx=1, pady=1)
 
     def _center(self, parent: tk.Widget) -> None:
+        """
+        Position the popup window centred over the parent widget.
+
+        Parameters
+        ----------
+        parent : tk.Widget
+            Widget to centre over.
+
+        Авторы
+        ------
+        Черкащенко Данил Дмитриевич,
+        Ловчиков Станислав Олегович,
+        Андреева Мария Александровна
+        """
         self.update_idletasks()
         px = parent.winfo_rootx() + parent.winfo_width() // 2
         py = parent.winfo_rooty() + parent.winfo_height() // 2
@@ -141,6 +197,7 @@ class CalendarPopup(tk.Toplevel):
     # ------------------------------------------------------------------
 
     def _prev_month(self) -> None:
+        """Navigate to the previous month and redraw the grid."""
         if self._month == 1:
             self._month = 12
             self._year -= 1
@@ -150,6 +207,7 @@ class CalendarPopup(tk.Toplevel):
         self._render_grid()
 
     def _next_month(self) -> None:
+        """Navigate to the next month and redraw the grid."""
         if self._month == 12:
             self._month = 1
             self._year += 1
@@ -159,7 +217,15 @@ class CalendarPopup(tk.Toplevel):
         self._render_grid()
 
     def _on_year_spin(self) -> None:
-        """Update the grid when the user changes the year via the spinbox."""
+        """
+        Update the grid when the user changes the year via the spinbox.
+
+        Авторы
+        ------
+        Черкащенко Данил Дмитриевич,
+        Ловчиков Станислав Олегович,
+        Андреева Мария Александровна
+        """
         try:
             year = int(self._year_spin.get())
         except ValueError:
@@ -173,6 +239,20 @@ class CalendarPopup(tk.Toplevel):
     # ------------------------------------------------------------------
 
     def _pick(self, day: int) -> None:
+        """
+        Select the chosen day, invoke the callback, and close the popup.
+
+        Parameters
+        ----------
+        day : int
+            Day of the month that the user clicked.
+
+        Авторы
+        ------
+        Черкащенко Данил Дмитриевич,
+        Ловчиков Станислав Олегович,
+        Андреева Мария Александровна
+        """
         chosen = date(self._year, self._month, day)
         if self._on_select is not None:
             self._on_select(chosen)

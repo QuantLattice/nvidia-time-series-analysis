@@ -10,7 +10,9 @@ This package contains runtime services used by the interface:
 
 from .translator import (
     Translator,
-    TranslationKeys
+)
+from .translation_keys import (
+    TranslationKeys,
 )
 from .ui_binder import (
     UIBinder

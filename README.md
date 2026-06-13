@@ -1,378 +1,150 @@
-# 📁 Project Structure
+# NVIDIA Time Series Analysis
 
-This project follows a layered architecture to ensure scalability, maintainability, and parallel development.  
-The structure is aligned with the technical requirements (TZ) and designed for team collaboration.
-
----
-
-## Root Directory
-
-### `work/`
-
-All project-related files are contained inside the `work/` directory, as required by the specification.
+Desktop application for loading, analysing, and visualising NVIDIA stock price data.
+Built with Python 3.11, Tkinter GUI, MySQL, and a full analytics pipeline.
 
 ---
 
-## 📂 Directory Overview
+## Requirements
 
-### 🔧 `config/`
-Contains application configuration files.
-
-- `default_app_config.json` — main configuration file
-- Stores paths, UI settings, and runtime parameters
-
----
-
-### 📊 `data/`
-Stores input datasets.
-
-- Base dataset (provided with the project)
-- Additional CSV files imported by the user
+| Dependency | Version |
+|---|---|
+| [Anaconda](https://www.anaconda.com/download)
+| MySQL Server | 8.0+ |
+| Python | 3.11 (managed by conda) |
 
 ---
 
-### 📄 `docs/`
-Project documentation.
+## Installation (Windows)
 
-- User Guide
-- Developer Guide
-- Diagrams, screenshots, and additional materials
-
----
-
-### 📈 `graphics/`
-Output directory for generated charts.
-
-- PNG / PDF files
-- Created by the reporting module
-
----
-
-### 🧩 `library/` (Core Utility Layer)
-
-Reusable, generic utilities independent of business logic.
-
-#### Submodules:
-- `config/` — configuration loading utilities
-- `io/` — file and CSV operations
-- `plotting/` — common plotting helpers and export logic
-- `utils/` — helper functions (dates, logging, etc.)
-- `validation/` — data validation and schema checks
-
-⚠️ This module must NOT contain business-specific logic.
+1. Install [Anaconda](https://www.anaconda.com/download) if not already installed.
+2. Install and start **MySQL Server**.
+3. Create a database:
+   ```sql
+   CREATE DATABASE nvidia_timeseries;
+   ```
+4. Double-click **`install.bat`**.
+   It will automatically:
+   - find Anaconda on your machine
+   - create a conda environment `nvidia-tsa` with Python 3.11
+   - install all required packages from `requirements.txt`
+   - copy `.env.example` → `.env`
+5. Open **`.env`** and fill in your MySQL credentials:
+   ```
+   MYSQL_USER=root
+   MYSQL_PASSWORD=your_password
+   MYSQL_HOST=localhost
+   MYSQL_PORT=3306
+   MYSQL_DB=nvidia_timeseries
+   ```
+6. Double-click **`run.bat`** to start the application.
 
 ---
 
-### 📝 `logs/`
-Application logs.
-
-- Runtime logs
-- Error tracking
-
----
-
-### 📤 `output/`
-Generated text reports.
-
-- CSV exports
-- Analytical tables
-
----
-
-### ⚙️ `scripts/` (Application Layer)
-
-Main application logic and business-specific modules.
-
-#### Submodules:
-
-##### `analytics/`
-- Financial calculations
-- Indicators (SMA, EMA, etc.)
-- Time series analysis
-- Forecasting models
-
-##### `db/`
-- Database models (SQLAlchemy)
-- DB session management
-- Low-level database operations
-
-##### `repositories/`
-- Data access layer
-- Abstraction over database queries
-
-##### `services/`
-- Business logic
-- Combines analytics, DB, and processing
-- Used by GUI
-
-##### `reports/`
-- Text reports (tables, statistics)
-- Graphical reports (charts)
-
-##### `gui/`
-- Tkinter-based user interface
-- Windows, dialogs, forms
-
----
-
-### 🚀 Entry Point
-
-
-### `scripts/main.py`
-
-
-Main application entry point.
-
-Run the application using:
-```bash
-python main.py
-```
-
----
-
-### 🛠️ `setup/`
-
-Installation and deployment scripts.
-
-* `install.bat` — environment setup (Conda)
-* `create_shortcut.bat` — optional desktop shortcut
-
----
-
-## 🧠 Architecture Overview
-
-The project follows a layered design:
-
-```
-GUI → Services → Repositories → Database
-         ↓
-     Analytics
-         ↓
-      Library
-```
-
-### Key Principles:
-
-* Separation of concerns
-* Reusable utility layer (`library`)
-* Clear data flow
-* Minimal coupling between modules
-
-### Global system rules:
-
-- `contracts.md` defines data structures (static truth)
-- `app_config.json` defines runtime behavior (dynamic settings)
-- All modules MUST respect both layers
-
----
-
-## 👥 Development Guidelines
-
-### Where to write code:
-
-| Task                   | Directory                       |
-| ---------------------- | ------------------------------- |
-| File handling, helpers | `library/`                      |
-| Business logic         | `scripts/services/`             |
-| Data analysis          | `scripts/analytics/`            |
-| Database logic         | `scripts/db/` + `repositories/` |
-| UI (Tkinter)           | `scripts/gui/`                  |
-| Reports                | `scripts/reports/`              |
-
----
-
-### ⚠️ Important Rules
-
-* Do NOT mix GUI and business logic
-* Do NOT write business logic inside `library/`
-* All data processing should go through `services/`
-* Follow PEP 8 and PEP 257
-* Keep modules under ~300 lines (as required)
-
-## ⚙️ Configuration System
-
-The project uses a centralized JSON-based configuration system.
-
-### Files:
-- `work/config/app_config.json` — active runtime configuration
-- `work/config/default_config.json` — fallback default configuration
-
-### Purpose:
-The configuration system defines all runtime parameters of the application, including:
-- file system paths
-- database connection settings
-- UI parameters
-- report export settings
-- analysis parameters
-
-### Key principles:
-- Single source of truth for all runtime settings
-- No hardcoded paths or parameters in code
-- All modules must read settings from config at runtime
-
-## 📐 Data Contracts
-
-The project enforces strict data contracts to ensure consistency across all modules
-(GUI, analytics, database, and reporting).
-
-### Main contract file:
-- `work/docs/contracts.md`
-
-### Purpose:
-Defines canonical formats for:
-- stock price data (OHLCV)
-- column naming conventions
-- CSV import rules
-- database schema structure
-- DataFrame formats used in processing pipeline
-
-## 🧪 Testing System
-
-The project includes a structured testing system based on `pytest`, designed to ensure correctness of data processing, validation logic, and full ETL pipeline consistency.
-
-### 📁 Test Structure
-
-All tests are located in:
-
-```
-work/tests/
-```
-
-#### Test categories:
-
-* `unit/` — isolated tests for individual components
-* `integration/` — full pipeline and cross-module tests
-* `fixtures/` — reusable test datasets and mock inputs
-* `helpers/` — shared testing utilities and pipeline builders
-
----
-
-### 🧪 Test Configuration
-
-Testing is configured via `pytest.ini`:
-
-```ini
-[pytest]
-pythonpath = .
-
-testpaths = work/tests
-
-markers =
-    unit: unit tests
-    integration: integration tests
-```
-
-### Key settings:
-
-* `pythonpath = .`
-  Ensures project root imports work correctly.
-
-* `testpaths = work/tests`
-  Restricts discovery to the project test directory.
-
-* Custom markers:
-
-  * `unit` → fast isolated tests
-  * `integration` → full system pipeline tests
-
----
-
-### ▶️ Running Tests
-
-#### Run all tests:
+## Installation (macOS / Linux)
 
 ```bash
-pytest
-```
+# Create and activate the conda environment
+conda create -n nvidia-tsa python=3.11 -y
+conda activate nvidia-tsa
 
-#### Run only unit tests:
+# Install packages
+pip install -r requirements.txt
 
-```bash
-pytest -m unit
-```
+# Copy and fill in credentials
+cp .env.example .env
+nano .env
 
-#### Run only integration tests:
-
-```bash
-pytest -m integration
-```
-
-#### Run specific directory:
-
-```bash
-pytest work/tests/unit
-pytest work/tests/integration
+# Run
+python -m work.scripts.main
 ```
 
 ---
 
-### 🔬 Testing Strategy
+## Running
 
-The testing system is designed around a layered validation approach:
+**Windows:**
+```
+run.bat
+```
 
-#### 1. Unit Tests
-
-Validate isolated components:
-
-* `StockQuoteNormalizer`
-* `StockQuoteValidator`
-* schema transformations
-* column cleanup logic
-* type conversion rules
-
-These tests ensure correctness of individual functions without external dependencies.
+**macOS / Linux:**
+```bash
+conda activate nvidia-tsa
+python -m work.scripts.main
+```
 
 ---
 
-#### 2. Integration Tests
+## Features
 
-Validate full data pipeline:
+### Data
+- Import stock price data from CSV
+- Export data to CSV
+- Browse data with pagination
+
+### Analysis
+- Interactive charts: Candlestick, Line, Scatter, Box, Histogram
+- Filter by date range
+
+### Feature Generation
+- **Moving Averages** — SMA, EMA, VWMA
+- **Returns** — daily, log, cumulative, rolling
+- **Technical Indicators** — RSI, MACD, Bollinger Bands, Volatility, Momentum
+- Select any combination of generated columns and plot as line chart
+
+### Reports
+- Export data to CSV
+- Export analytics report to TXT
+
+---
+
+## Project Structure
 
 ```
-raw input → normalization → validation → clean dataset
+nvidia-time-series-analysis/
+├── work/
+│   ├── config/          # App configuration (JSON)
+│   ├── data/            # Input datasets
+│   ├── graphics/        # Icons and images
+│   ├── library/         # Reusable utilities (plotting, config, IO)
+│   ├── output/          # Exported reports
+│   ├── resources/i18n/  # Localization (en, ru, pt, ky)
+│   └── scripts/
+│       ├── analytics/   # Indicators and feature generators
+│       ├── controllers/ # GUI ↔ service layer
+│       ├── db/          # SQLAlchemy models and migrations
+│       ├── gui/         # Tkinter interface
+│       ├── repositories/# Data access layer
+│       ├── services/    # Business logic
+│       └── main.py      # Entry point
+├── install.bat          # Windows installer
+├── run.bat              # Windows launcher
+├── environment.yml      # Conda environment definition
+├── requirements.txt     # Python packages
+└── .env.example         # Database credentials template
 ```
 
-Coverage includes:
+---
 
-* valid CSV-like datasets
-* schema violations (missing or extra columns)
-* type conversion failures
-* business rule enforcement (OHLC logic)
-* invalid numeric values (negative volume, prices)
-* real-world noisy datasets
-* null handling scenarios
+## Running Tests
 
-Integration tests ensure that all system layers work correctly together:
+```bash
+conda activate nvidia-tsa
 
-* contracts
-* services
-* validation
-* data processing pipeline
+pytest                   # all tests
+pytest -m unit           # unit tests only
+pytest -m integration    # integration tests only
+```
 
-## 🖥️ GUI Documentation
+---
 
-The GUI layer is documented separately to make future maintenance and extension easier.
+## Architecture
 
-### Documentation files:
-- `work/docs/gui.md` — high-level GUI architecture and its role in the overall application
-- `work/scripts/gui/README.md` — implementation guide for the `scripts/gui/` package
-
-### What the GUI documentation covers:
-- overall GUI structure
-- startup flow and object initialization
-- layout system
-- themes, styles, and localization
-- reusable widgets and dialogs
-- state management and UI binding
-- rules for adding new views, dialogs, themes, and languages
-
-### Development rule:
-When extending the interface, follow the existing GUI layer structure and keep:
-- presentation logic inside `scripts/gui/`
-- business logic inside `scripts/services/`
-- data access inside `scripts/repositories/`
-- shared contracts inside `scripts/contracts/`
-
-### Recommended entry points for contributors:
-- start with `work/docs/gui.md` for architecture understanding
-- then read `work/scripts/gui/README.md` before modifying the GUI code
+```
+GUI → Controllers → Services → Repositories → Database
+                       ↓
+                   Analytics
+                       ↓
+                    Library
+```

@@ -1,14 +1,6 @@
 """Service layer for stock quote operations.
 
-This module provides the application-level API for creating, updating,
-deleting, and retrieving stock quote data. It bridges the presentation
-layer, the repository layer, and the ORM model layer.
-
-The service is responsible for:
-- converting DTOs to ORM entities
-- converting ORM entities to DTOs
-- exposing read methods for GUI and analytics layers
-- preparing DataFrames for reporting and analysis
+Авторы: Черкащенко Д.Д., Ловчиков С.О., Андреева М.А.
 """
 
 
@@ -18,12 +10,15 @@ from work.scripts.db.session import Database
 from work.scripts.repositories.stock_quote_repository import (
     StockQuoteRepository
 )
-from work.scripts.db.models import StockQuote
-from work.scripts.contracts.schemas import StockQuoteSchema as S
 from work.scripts.dto import (
     StockQuoteCreateDTO,
     StockQuoteUpdateDTO,
     StockQuoteDTO
+)
+from work.scripts.services.stock_quote_mappers import (
+    to_entity,
+    to_dto,
+    to_dataframe,
 )
 
 from datetime import date
@@ -33,30 +28,14 @@ from typing import Optional, List, Tuple
 class StockQuoteService:
     """Business service for stock quote management.
 
-    This service encapsulates repository access and performs conversions
-    between DTOs, ORM entities, and pandas DataFrames.
-
     Parameters
     ----------
     db : Database
-        Database connection manager used to create transactional sessions.
-
-    Notes
-    -----
-    - Create operations accept StockQuoteCreateDTO.
-    - Update operations accept StockQuoteUpdateDTO.
-    - Read operations return StockQuoteDTO or pandas DataFrame.
+        Database connection manager.
     """
 
     def __init__(self, db: Database) -> None:
-        """Initialize service with a database manager.
-
-        Parameters
-        ----------
-        db : Database
-            Database connection manager.
-        """
-
+        """Initialize service with a database manager."""
         self.db = db
 
     # ============================================================
@@ -77,14 +56,12 @@ class StockQuoteService:
             Created stock quote with generated identifier.
         """
 
-        entity = self._to_entity(dto)
-
+        entity = to_entity(dto)
         with self.db.session() as session:
             repo = StockQuoteRepository(session)
             repo.create(entity)
             session.flush()
-
-            return self._to_dto(entity)
+            return to_dto(entity)
 
     def create_quote_bulk(
         self,
@@ -98,8 +75,7 @@ class StockQuoteService:
             Input DTOs for batch insertion.
         """
 
-        entities = [self._to_entity(dto) for dto in dtos]
-
+        entities = [to_entity(dto) for dto in dtos]
         with self.db.session() as session:
             repo = StockQuoteRepository(session)
             repo.create_bulk(entities)
@@ -151,7 +127,7 @@ class StockQuoteService:
 
             repo.update(entity)
 
-            return self._to_dto(entity)
+            return to_dto(entity)
 
     # ============================================================
     # DELETE
@@ -173,11 +149,9 @@ class StockQuoteService:
 
         with self.db.session() as session:
             repo = StockQuoteRepository(session)
-
             entity = repo.get_by_id(quote_id)
             if entity is None:
                 return False
-
             repo.delete(entity)
             return True
 
@@ -212,7 +186,7 @@ class StockQuoteService:
                 sort_col=sort_col,
                 sort_desc=sort_desc,
             )
-            return [self._to_dto(entity=q) for q in quotes], total
+            return [to_dto(entity=q) for q in quotes], total
 
     def get_quote_by_id(self, quote_id: int) -> Optional[StockQuoteDTO]:
         """Retrieve a stock quote by identifier.
@@ -231,11 +205,9 @@ class StockQuoteService:
         with self.db.session() as session:
             repo = StockQuoteRepository(session)
             entity = repo.get_by_id(quote_id)
-
             if entity is None:
                 return None
-
-            return self._to_dto(entity)
+            return to_dto(entity)
 
     def get_all_quotes(self) -> List[StockQuoteDTO]:
         """Retrieve all stock quotes.
@@ -248,11 +220,7 @@ class StockQuoteService:
 
         with self.db.session() as session:
             repo = StockQuoteRepository(session)
-
-            return [
-                self._to_dto(q)
-                for q in repo.get_all()
-            ]
+            return [to_dto(q) for q in repo.get_all()]
 
     def get_quotes_by_date_range(
         self,
@@ -262,7 +230,7 @@ class StockQuoteService:
         with self.db.session() as session:
             repo = StockQuoteRepository(session)
             return [
-                self._to_dto(q)
+                to_dto(q)
                 for q in repo.get_by_date_range(start_date, end_date)
             ]
 
@@ -288,10 +256,7 @@ class StockQuoteService:
 
         with self.db.session() as session:
             repo = StockQuoteRepository(session)
-
-            quotes = repo.get_all()
-
-            return self._to_dataframe(quotes)
+            return to_dataframe(repo.get_all())
 
     def get_quotes_by_date_range_df(
         self,
@@ -315,101 +280,6 @@ class StockQuoteService:
 
         with self.db.session() as session:
             repo = StockQuoteRepository(session)
-
-            quotes = repo.get_by_date_range(start_date, end_date)
-
-            return self._to_dataframe(quotes)
-
-    # ============================================================
-    # DTO ↔ ORM
-    # ============================================================
-
-    def _to_entity(self, dto: StockQuoteCreateDTO) -> StockQuote:
-        """Convert creation DTO into ORM entity.
-
-        Parameters
-        ----------
-        dto : StockQuoteCreateDTO
-            Input DTO with stock quote data.
-
-        Returns
-        -------
-        StockQuote
-            ORM entity ready for persistence.
-        """
-
-        return StockQuote(
-            trade_date=dto.trade_date,
-            source=dto.source,
-            open_price=dto.open_price,
-            high_price=dto.high_price,
-            low_price=dto.low_price,
-            close_price=dto.close_price,
-            volume=dto.volume,
-            adj_close_price=dto.adj_close_price,
-        )
-
-    def _to_dto(self, entity: StockQuote) -> StockQuoteDTO:
-        """Convert ORM entity into read DTO.
-
-        Parameters
-        ----------
-        entity : StockQuote
-            ORM entity loaded from the database.
-
-        Returns
-        -------
-        StockQuoteDTO
-            DTO suitable for presentation and API response layers.
-        """
-
-        return StockQuoteDTO(
-            id=entity.id,
-            trade_date=entity.trade_date,
-            source=entity.source,
-            open_price=float(entity.open_price),
-            high_price=float(entity.high_price),
-            low_price=float(entity.low_price),
-            close_price=float(entity.close_price),
-
-            adj_close_price=float(entity.adj_close_price)
-            if entity.adj_close_price is not None
-            else None,
-
-            volume=entity.volume,
-        )
-
-    def _to_dataframe(self, quotes: List[StockQuote]) -> pd.DataFrame:
-        """Convert ORM entities to a pandas DataFrame.
-
-        Parameters
-        ----------
-        quotes : list[StockQuote]
-            List of ORM objects.
-
-        Returns
-        -------
-        pd.DataFrame
-            Tabular representation of stock quote data.
-        """
-
-        return pd.DataFrame(
-            [
-                {
-                    S.TRADE_DATE: q.trade_date,
-                    S.SOURCE: q.source,
-                    S.OPEN_PRICE: float(q.open_price),
-                    S.HIGH_PRICE: float(q.high_price),
-                    S.LOW_PRICE: float(q.low_price),
-                    S.CLOSE_PRICE: float(q.close_price),
-
-                    S.ADJ_CLOSE_PRICE: float(q.adj_close_price)
-                    if q.adj_close_price is not None
-                    else None,
-
-                    S.VOLUME: q.volume
-                }
-                for q in quotes
-            ],
-            columns=S.ALL_COLUMNS
-        )
+            return to_dataframe(
+                repo.get_by_date_range(start_date, end_date)
+            )

@@ -15,21 +15,25 @@ depending on the analysis task.
 """
 
 
-from .descriptive_statistics import (
+from .central_tendency import (
     mean,
-    median,
+    median
+)
+from .shape_statistics import (
+    skewness,
+    kurtosis,
+    positive_ratio,
+    negative_ratio,
+    zero_ratio
+)
+from .descriptive_statistics import (
     variance,
     std,
     data_range,
     min_value,
     max_value,
-    skewness,
-    kurtosis,
     missing_count,
     missing_ratio,
-    positive_ratio,
-    negative_ratio,
-    zero_ratio,
     trimmed_mean,
     mad,
     coefficient_of_variation
@@ -59,12 +63,17 @@ from .distribution_statistics import (
 )
 from .correlation_analysis import (
     CorrelationMatrixResult,
-    correlation_matrix,
     CorrelationPair,
+    pearson_correlation,
+    spearman_correlation,
+    kendall_correlation,
+)
+from .correlation_pairs import (
+    correlation_matrix,
     correlation_pairs,
     strong_correlation,
     top_positive_correlations,
-    top_negative_correlations
+    top_negative_correlations,
 )
 from .categorical_statistics import (
     CategoryDistribution,
@@ -115,8 +124,11 @@ __all__ = [
     "EmpiricalCDFResult",
 
     "CorrelationMatrixResult",
-    "correlation_matrix",
     "CorrelationPair",
+    "pearson_correlation",
+    "spearman_correlation",
+    "kendall_correlation",
+    "correlation_matrix",
     "correlation_pairs",
     "strong_correlation",
     "top_positive_correlations",

@@ -20,9 +20,29 @@ class ReportController:
     ----------
     service : StockQuoteService
         Data source used to build the analysis DataFrame.
+
+    Авторы
+    ------
+    Черкащенко Данил Дмитриевич,
+    Ловчиков Станислав Олегович,
+    Андреева Мария Александровна
     """
 
     def __init__(self, service: StockQuoteService) -> None:
+        """
+        Initialize the report controller.
+
+        Parameters
+        ----------
+        service : StockQuoteService
+            Data source used to build the analysis DataFrame.
+
+        Авторы
+        ------
+        Черкащенко Данил Дмитриевич,
+        Ловчиков Станислав Олегович,
+        Андреева Мария Александровна
+        """
         self.service = service
         self._eda = EDAReport()
         self._ts = TSReport()
@@ -42,6 +62,12 @@ class ReportController:
         dict
             ``{"success": True, "data": None, "error": None}`` on success,
             or ``{"success": False, "data": None, "error": <msg>}`` on failure.
+
+        Авторы
+        ------
+        Черкащенко Данил Дмитриевич,
+        Ловчиков Станислав Олегович,
+        Андреева Мария Александровна
         """
         return self._handle(lambda: self._do_export(path))
 
@@ -50,6 +76,20 @@ class ReportController:
     # ------------------------------------------------------------------
 
     def _do_export(self, path: str) -> None:
+        """
+        Build the full EDA + TS report and write it to the given path.
+
+        Parameters
+        ----------
+        path : str
+            Destination file path.
+
+        Авторы
+        ------
+        Черкащенко Данил Дмитриевич,
+        Ловчиков Станислав Олегович,
+        Андреева Мария Александровна
+        """
         df = self.service.get_all_quotes_df()
 
         if df.empty:
@@ -64,6 +104,25 @@ class ReportController:
             fh.write(text)
 
     def _handle(self, func: Callable[[], Any]) -> Dict[str, Any]:
+        """
+        Execute a callable and wrap the result in a standardized response dict.
+
+        Parameters
+        ----------
+        func : Callable[[], Any]
+            Function to execute.
+
+        Returns
+        -------
+        dict[str, Any]
+            ``{"success": True/False, "data": None, "error": str | None}``.
+
+        Авторы
+        ------
+        Черкащенко Данил Дмитриевич,
+        Ловчиков Станислав Олегович,
+        Андреева Мария Александровна
+        """
         try:
             func()
             return {"success": True, "data": None, "error": None}

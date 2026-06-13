@@ -19,9 +19,11 @@ from .moving_averages import (
     ema,
     vwma
 )
-from .technical_indicators import (
+from .rsi import (
     RSIMethod,
-    rsi,
+    rsi
+)
+from .technical_indicators import (
     macd,
     bollinger_bands,
     volatility,
