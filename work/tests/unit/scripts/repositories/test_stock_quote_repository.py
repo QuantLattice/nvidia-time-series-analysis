@@ -7,7 +7,8 @@ Test coverage includes:
 - bulk insertion
 - updates
 - deletions
-- query operations (by id, full scan, date filtering)
+- query operations (by id, full scan, date filtering, pagination)
+- count and date range queries
 
 All tests use an isolated in-memory SQLite database.
 """
@@ -180,3 +181,135 @@ def test_get_by_date_range(db_session: Session) -> None:
     result = repo.get_by_date_range(start_date, end_date)
 
     assert len(result) == len(expected)
+
+
+# =========================================================
+# COUNT
+# =========================================================
+
+@pytest.mark.unit
+def test_count_all_empty(db_session: Session) -> None:
+    """count_all returns 0 when the table is empty."""
+    repo = StockQuoteRepository(db_session)
+    assert repo.count_all() == 0
+
+
+@pytest.mark.unit
+def test_count_all(db_session: Session) -> None:
+    """count_all returns the correct number of inserted rows."""
+    repo = StockQuoteRepository(db_session)
+    entities = [StockQuoteFactory.create(), StockQuoteFactory.create()]
+    repo.create_bulk(entities)
+    db_session.commit()
+    assert repo.count_all() == 2
+
+
+# =========================================================
+# DELETE ALL
+# =========================================================
+
+@pytest.mark.unit
+def test_delete_all(db_session: Session) -> None:
+    """delete_all removes every row from the table."""
+    repo = StockQuoteRepository(db_session)
+    repo.create_bulk([StockQuoteFactory.create(), StockQuoteFactory.create()])
+    db_session.commit()
+
+    repo.delete_all()
+    db_session.commit()
+
+    assert repo.count_all() == 0
+
+
+# =========================================================
+# PAGINATION
+# =========================================================
+
+@pytest.mark.unit
+def test_get_page_returns_correct_slice(db_session: Session) -> None:
+    """get_page returns the right number of rows for offset/limit."""
+    repo = StockQuoteRepository(db_session)
+    entities = [StockQuoteFactory.create() for _ in range(5)]
+    repo.create_bulk(entities)
+    db_session.commit()
+
+    page = repo.get_page(offset=0, limit=3)
+    assert len(page) == 3
+
+
+@pytest.mark.unit
+def test_get_page_offset(db_session: Session) -> None:
+    """get_page with offset skips the right number of rows."""
+    repo = StockQuoteRepository(db_session)
+    entities = [StockQuoteFactory.create() for _ in range(4)]
+    repo.create_bulk(entities)
+    db_session.commit()
+
+    page = repo.get_page(offset=3, limit=10)
+    assert len(page) == 1
+
+
+@pytest.mark.unit
+def test_get_page_sort_desc(db_session: Session) -> None:
+    """get_page with sort_desc=True returns rows in descending order."""
+    repo = StockQuoteRepository(db_session)
+    e1 = StockQuoteFactory.create(trade_date=date(2023, 1, 1))
+    e2 = StockQuoteFactory.create(trade_date=date(2023, 6, 1))
+    repo.create_bulk([e1, e2])
+    db_session.commit()
+
+    page = repo.get_page(
+        offset=0, limit=10, sort_col='trade_date', sort_desc=True
+    )
+    dates = [r.trade_date for r in page]
+    assert dates == sorted(dates, reverse=True)
+
+
+# =========================================================
+# DATE RANGE QUERY
+# =========================================================
+
+@pytest.mark.unit
+def test_get_date_range_empty(db_session: Session) -> None:
+    """get_date_range returns (None, None) when table is empty."""
+    repo = StockQuoteRepository(db_session)
+    min_d, max_d = repo.get_date_range()
+    assert min_d is None
+    assert max_d is None
+
+
+@pytest.mark.unit
+def test_get_date_range(db_session: Session) -> None:
+    """get_date_range returns correct min and max dates."""
+    repo = StockQuoteRepository(db_session)
+    dates = [date(2023, 3, 1), date(2023, 1, 1), date(2023, 6, 15)]
+    entities = [StockQuoteFactory.create(trade_date=d) for d in dates]
+    repo.create_bulk(entities)
+    db_session.commit()
+
+    min_d, max_d = repo.get_date_range()
+    assert min_d == date(2023, 1, 1)
+    assert max_d == date(2023, 6, 15)
+
+
+# =========================================================
+# EDGE CASES
+# =========================================================
+
+@pytest.mark.unit
+def test_get_by_id_not_found(db_session: Session) -> None:
+    """get_by_id returns None for a non-existent id."""
+    repo = StockQuoteRepository(db_session)
+    assert repo.get_by_id(99999) is None
+
+
+@pytest.mark.unit
+def test_get_by_date_range_no_match(db_session: Session) -> None:
+    """get_by_date_range returns empty list when no records match."""
+    repo = StockQuoteRepository(db_session)
+    entity = StockQuoteFactory.create(trade_date=date(2022, 1, 1))
+    repo.create(entity)
+    db_session.commit()
+
+    result = repo.get_by_date_range(date(2023, 1, 1), date(2023, 12, 31))
+    assert result == []

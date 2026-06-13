@@ -15,7 +15,8 @@ used in production workflows.
 """
 
 
-from datetime import date
+import itertools
+from datetime import date, timedelta
 
 from work.scripts.db.models import StockQuote
 
@@ -25,8 +26,14 @@ from typing import Optional
 class StockQuoteFactory:
     """Factory for StockQuote ORM entities used in tests."""
 
-    @staticmethod
+    # Each call to create() without an explicit trade_date gets a unique
+    # date starting from 2020-01-01, avoiding UNIQUE(trade_date, source)
+    # conflicts across tests that share the same in-memory database.
+    _counter: itertools.count = itertools.count(0)
+
+    @classmethod
     def create(
+        cls,
         *,
         trade_date: Optional[date] = None,
         source: str = "test-source",
@@ -42,7 +49,7 @@ class StockQuoteFactory:
         Parameters
         ----------
         trade_date : date, optional
-            Trading date of the record. Defaults to 2024-01-01.
+            Trading date. Auto-increments from 2020-01-01 if omitted.
         source : str
             Identifier of the data source.
         open_price : float
@@ -63,9 +70,11 @@ class StockQuoteFactory:
         StockQuote
             Fully initialized ORM entity ready for persistence.
         """
+        if trade_date is None:
+            trade_date = date(2020, 1, 1) + timedelta(days=next(cls._counter))
 
         return StockQuote(
-            trade_date=trade_date or date(2024, 1, 1),
+            trade_date=trade_date,
             source=source,
             open_price=open_price,
             high_price=high_price,
