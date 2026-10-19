@@ -5,11 +5,12 @@ setlocal
 pushd %~dp0..\..\..\
 
 echo [STEP] Applying database migrations...
-alembic upgrade head
+conda run -n nvidia-tsa alembic upgrade head
 
 if errorlevel 1 (
     echo [ERROR] Failed to apply migrations
     popd
+    endlocal
     exit /b 1
 )
 

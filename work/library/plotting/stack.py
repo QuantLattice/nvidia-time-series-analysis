@@ -16,36 +16,42 @@ It is responsible for:
 
 Design principle
 -----------------
-The stack is intentionally framework-agnostic and does not perform any
-rendering logic. It only organizes and indexes layers for downstream
-consumption.
+The stack is intentionally framework-agnostic and does not perform
+any rendering logic. It only organizes and indexes layers for
+downstream consumption.
+
+Авторы: Черкащенко Д.Д., Ловчиков С.О., Андреева М.А.
 """
 
 
 from typing import (
     Iterable,
     List,
-    Optional
 )
 
 from work.library.plotting.contracts import (
-    LayerPlacement,
-    PlotLayer
+    PlotLayer,
+)
+from work.library.plotting.stack_queries import (
+    LayerStackQueryMixin,
 )
 
 
-class LayerStack:
+class LayerStack(LayerStackQueryMixin):
     """
     Container for plot layers used during rendering.
 
-    The stack stores plot layers in insertion order and provides helper
-    methods for grouping and querying layers by placement.
+    The stack stores plot layers in insertion order and provides
+    helper methods for grouping and querying layers by placement
+    (inherited from ``LayerStackQueryMixin``).
 
     Notes
     -----
     - The stack does not perform rendering.
     - It acts as a registry for PlotLayer objects.
     - Ordering is preserved for deterministic rendering.
+
+    Авторы: Черкащенко Д.Д., Ловчиков С.О., Андреева М.А.
     """
 
     # ------------------------------------------------------------------
@@ -160,86 +166,6 @@ class LayerStack:
         self._layers.clear()
 
     # ------------------------------------------------------------------
-    # Queries
-    # ------------------------------------------------------------------
-
-    def get_by_id(
-        self,
-        layer_id: str
-    ) -> Optional[PlotLayer]:
-        """
-        Retrieve a layer by its identifier.
-
-        Parameters
-        ----------
-        layer_id : str
-            Layer identifier.
-
-        Returns
-        -------
-        Optional[PlotLayer]
-            Matching layer or None if not found.
-        """
-
-        for layer in self._layers:
-            if layer.id == layer_id:
-                return layer
-
-        return None
-
-    def get_all(self) -> List[PlotLayer]:
-        """
-        Return all stored plot layers.
-
-        Returns
-        -------
-        List[PlotLayer]
-            Copy of the internal layer list in insertion order.
-        """
-
-        return list(self._layers)
-
-    def primary_layers(self) -> List[PlotLayer]:
-        """
-        Return plot layers marked as primary.
-
-        Returns
-        -------
-        List[PlotLayer]
-            Layers whose placement is ``LayerPlacement.PRIMARY``.
-        """
-
-        return self._get_layers_by_placement(
-            placement=LayerPlacement.PRIMARY
-        )
-
-    def overlay_layers(self) -> List[PlotLayer]:
-        """
-        Return plot layers marked as overlay.
-
-        Returns
-        -------
-        List[PlotLayer]
-            Layers whose placement is ``LayerPlacement.OVERLAY``.
-        """
-
-        return self._get_layers_by_placement(
-            placement=LayerPlacement.OVERLAY
-        )
-
-    def has_overlay_layers(self) -> bool:
-        """
-        Check whether overlay layers exist.
-
-        Returns
-        -------
-        bool
-            True if overlay layers are present.
-        """
-
-        return len(self.overlay_layers()) > 0
-
-    # ------------------------------------------------------------------
     # Collection protocol
     # ------------------------------------------------------------------
 
@@ -278,31 +204,3 @@ class LayerStack:
         """
 
         return f"LayerStack(layers={len(self)})"
-
-    # ------------------------------------------------------------------
-    # Internal helpers
-    # ------------------------------------------------------------------
-
-    def _get_layers_by_placement(
-        self,
-        placement: LayerPlacement
-    ) -> List[PlotLayer]:
-        """
-        Return layers matching a given placement.
-
-        Parameters
-        ----------
-        placement : LayerPlacement
-            Requested layer placement category.
-
-        Returns
-        -------
-        List[PlotLayer]
-            Layers whose placement matches the requested category.
-        """
-
-        return [
-            layer
-            for layer in self._layers
-            if layer.placement == placement
-        ]

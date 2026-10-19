@@ -41,18 +41,16 @@ Autocorrelation analysis
 """
 
 
+from .descriptive_contracts import (
+    SeriesDescriptiveReport,
+)
 from .descriptive_statistics import (
     DescriptiveAnalysis,
-    SeriesDescriptiveReport
 )
-from .rolling_analysis import (
-    RollingAnalysis,
-    RollingSeriesReport
-)
-from .distribution_statistics import (
-    DistributionAnalysis,
-    DistributionAnalysisReport
-)
+from .rolling_contracts import RollingSeriesReport
+from .rolling_analysis import RollingAnalysis
+from .distribution_contracts import DistributionAnalysisReport
+from .distribution_statistics import DistributionAnalysis
 from .correlation_analysis import (
     CorrelationAnalysis,
     CorrelationAnalysisReport

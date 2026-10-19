@@ -1,16 +1,6 @@
-"""
-Application menu bar component.
-
-This module implements the top-level menu bar of the application,
-including file/help actions and right-side control buttons such as:
-- settings menu;
-- layout visibility toggle.
-"""
-
-
+import tkinter as tk
 from tkinter import ttk, Tk
 from typing import Callable, Tuple
-import tkinter as tk
 
 from work.library.config import Config
 from work.scripts.gui.constants.scale import resolve_ui_scale
@@ -22,32 +12,32 @@ from work.scripts.gui.views import SettingsMenu
 
 class MenuBar(ttk.Frame):
     """
-    Main application menu bar.
-
-    The MenuBar provides:
-    - file and help command buttons;
-    - access to settings menu;
-    - control buttons for UI layout and visibility.
+    Application menu bar with File menu and settings/display icon buttons.
 
     Parameters
     ----------
     parent : Tk
         Root application window.
-
     config : Config
         Application configuration object.
-
     ui_factory : UIFactory
-        Factory for creating styled UI components.
-
+        Factory used to create themed UI controls.
     on_toggle_panels : Callable[[], None]
-        Callback for toggling context/content panels visibility.
-
+        Callback for the display toggle button.
+    on_import_csv : Callable[[], None]
+        Callback for the CSV import menu item.
+    on_export_csv : Callable[[], None]
+        Callback for the CSV export menu item.
     translator : Translator
         Localization service.
-
     ui_settings : UISettings
         Runtime UI configuration manager.
+
+    Авторы
+    ------
+    Черкащенко Данил Дмитриевич,
+    Ловчиков Станислав Олегович,
+    Андреева Мария Александровна
     """
 
     def __init__(
@@ -62,34 +52,33 @@ class MenuBar(ttk.Frame):
         ui_settings: UISettings,
     ) -> None:
         """
-        Initialize the main application menu bar.
+        Initialize the menu bar and build its widgets.
 
         Parameters
         ----------
         parent : Tk
             Root application window.
-
         config : Config
             Application configuration object.
-
         ui_factory : UIFactory
-            Factory for creating styled UI components.
-
+            Factory used to create themed UI controls.
         on_toggle_panels : Callable[[], None]
-            Callback function used to toggle visibility of UI panels.
-
+            Callback for the display toggle button.
+        on_import_csv : Callable[[], None]
+            Callback for the CSV import menu item.
+        on_export_csv : Callable[[], None]
+            Callback for the CSV export menu item.
         translator : Translator
-            Localization service used for menu labels.
-
+            Localization service.
         ui_settings : UISettings
-            Runtime UI state manager for theme, scale and language.
+            Runtime UI configuration manager.
 
-        Notes
-        -----
-        The constructor also initializes the SettingsMenu and builds
-        all menu UI elements.
+        Авторы
+        ------
+        Черкащенко Данил Дмитриевич,
+        Ловчиков Станислав Олегович,
+        Андреева Мария Александровна
         """
-
         super().__init__(master=parent)
 
         self.config = config
@@ -111,28 +100,30 @@ class MenuBar(ttk.Frame):
 
     def _build(self) -> None:
         """
-        Construct menu bar UI elements.
+        Build the File menu button and the settings/display icon buttons.
 
-        Creates:
-        - left-aligned command buttons;
-        - right-aligned icon buttons (settings, layout control).
+        Авторы
+        ------
+        Черкащенко Данил Дмитриевич,
+        Ловчиков Станислав Олегович,
+        Андреева Мария Александровна
         """
+        menu_bar = self.translator.get_data().menu_bar
 
+        # ── left: File menu button ───────────────────────────────
         left = ttk.Frame(master=self)
         left.pack(side="left", fill="y")
-
-        menu_bar = self.translator.get_data().menu_bar
 
         self.file_menu = tk.Menu(master=self, tearoff=0)
         self.file_menu.add_command(
             label=menu_bar.import_button_label,
             command=self.on_import_csv,
-            font=self._get_font()
+            font=self._get_font(),
         )
         self.file_menu.add_command(
             label=menu_bar.export_button_label,
             command=self.on_export_csv,
-            font=self._get_font()
+            font=self._get_font(),
         )
 
         self.file_button = self.ui_factory.text_button(
@@ -143,17 +134,12 @@ class MenuBar(ttk.Frame):
         )
         self.file_button.pack(side="left", fill="y")
 
-        self.ui_factory.text_button(
-            parent=left,
-            text=menu_bar.help_button_text,
-            command=lambda: print("Help"),
-            style=StyleName.FLAT_BUTTON,
-        ).pack(side="left", fill="y")
-
+        # ── right: settings + display icons ─────────────────────
         right = ttk.Frame(master=self)
         right.pack(side="right")
 
         assets = self.config.app.assets
+
         self.settings_button = self.ui_factory.icon_button(
             parent=right,
             icon_path=assets.settings_icon,
@@ -162,37 +148,38 @@ class MenuBar(ttk.Frame):
         )
         self.settings_button.pack(side="right")
 
-        display_button = self.ui_factory.icon_button(
+        self.ui_factory.icon_button(
             parent=right,
             icon_path=assets.display_icon,
             command=self.on_toggle_panels,
             tooltip=menu_bar.display_button_tooltip,
-        )
-        display_button.pack(side="right")
+        ).pack(side="right")
 
     def _post_file_menu(self) -> None:
+        """Pop up the File dropdown menu below the File button."""
         x = self.file_button.winfo_rootx()
         y = self.file_button.winfo_rooty() + self.file_button.winfo_height()
         self.file_menu.tk_popup(x, y)
 
     def _toggle_settings_menu(self) -> None:
-        """
-        Open or reposition the settings menu under its anchor button.
-        """
-
+        """Show settings drop-down menu under the settings icon."""
         self.settings_menu.post_under(self.settings_button)
 
     def _get_font(self) -> Tuple[str, int]:
         """
-        Build the default UI font tuple.
+        Return the menu font tuple based on current UI scale settings.
 
         Returns
         -------
-        Tuple[str, int]
-            Font family and scaled font size.
-        """
+        tuple[str, int]
+            Font family and size.
 
+        Авторы
+        ------
+        Черкащенко Данил Дмитриевич,
+        Ловчиков Станислав Олегович,
+        Андреева Мария Александровна
+        """
         ui = self.config.user.ui
         scale = resolve_ui_scale(ui.scale)
-
         return (ui.font_family, scale.font_size)

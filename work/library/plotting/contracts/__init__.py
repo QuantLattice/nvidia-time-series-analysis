@@ -42,8 +42,10 @@ implementation and can be reused across different backends.
 from .config import (
     FigureConfig,
     ChartConfig,
+)
+from .axis_config import (
     AxisVisibilityConfig,
-    ChartStyle
+    ChartStyle,
 )
 from .layer import (
     LayerPlacement,

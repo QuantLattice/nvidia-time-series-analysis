@@ -9,10 +9,12 @@ The analysis supports:
 """
 
 
-from dataclasses import dataclass
 from typing import Mapping, List, Union, overload, cast
 import pandas as pd
 
+from work.scripts.analytics.analysis.rolling_contracts import (
+    RollingSeriesReport
+)
 from work.scripts.analytics.utils import resolve_series_name
 from work.scripts.analytics.statistics import (
     rolling_mean,
@@ -28,72 +30,14 @@ from work.scripts.analytics.statistics import (
 )
 
 
-@dataclass(frozen=True)
-class RollingSeriesReport:
-    """
-    Rolling statistical analysis report for a single Series.
-
-    Attributes
-    ----------
-    name : str
-        Resolved series name.
-
-    window : int
-        Rolling window size used for analysis.
-
-    rolling_mean : pd.Series
-        Rolling arithmetic mean.
-
-    rolling_std : pd.Series
-        Rolling standard deviation.
-
-    rolling_min : pd.Series
-        Rolling minimum values.
-
-    rolling_max : pd.Series
-        Rolling maximum values.
-
-    rolling_zscore : pd.Series
-        Rolling z-score normalization.
-
-    rolling_volatility : pd.Series
-        Rolling volatility estimate.
-
-    rolling_momentum : pd.Series
-        Rolling momentum values.
-
-    rolling_rate_of_change : pd.Series
-        Rolling rate of change values.
-
-    rolling_variance : pd.Series
-        Rolling variance values.
-
-    rolling_cv : pd.Series
-        Rolling coefficient of variation.
-    """
-
-    name: str
-    window: int
-
-    rolling_mean: pd.Series
-    rolling_std: pd.Series
-    rolling_min: pd.Series
-    rolling_max: pd.Series
-    rolling_zscore: pd.Series
-    rolling_volatility: pd.Series
-    rolling_momentum: pd.Series
-    rolling_rate_of_change: pd.Series
-    rolling_variance: pd.Series
-    rolling_cv: pd.Series
-
-
 class RollingAnalysis:
     """
     Build rolling-statistics reports for pandas Series and DataFrames.
 
     The class acts as a convenience wrapper around the reusable
-    statistical helpers from ``work.scripts.analytics.statistics`` and
-    returns structured report objects instead of raw Series values.
+    statistical helpers from ``work.scripts.analytics.statistics``
+    and returns structured report objects instead of raw Series
+    values.
     """
 
     @overload
@@ -101,97 +45,28 @@ class RollingAnalysis:
         self,
         data: pd.Series,
         window: int
-    ) -> RollingSeriesReport:
-        """
-        Analyze a Series using a single rolling window.
-
-        Parameters
-        ----------
-        data : pd.Series
-            Input series.
-
-        window : int
-            Rolling window size.
-
-        Returns
-        -------
-        RollingSeriesReport
-            Rolling analysis report for the specified window.
-        """
-        ...
+    ) -> RollingSeriesReport: ...
 
     @overload
     def analyze(
         self,
         data: pd.Series,
         window: List[int]
-    ) -> Mapping[int, RollingSeriesReport]:
-        """
-        Analyze a Series using multiple rolling windows.
-
-        Parameters
-        ----------
-        data : pd.Series
-            Input series.
-
-        window : list[int]
-            Collection of rolling window sizes.
-
-        Returns
-        -------
-        Mapping[int, RollingSeriesReport]
-            Mapping between window size and rolling analysis report.
-        """
-        ...
+    ) -> Mapping[int, RollingSeriesReport]: ...
 
     @overload
     def analyze(
         self,
         data: pd.DataFrame,
         window: int
-    ) -> Mapping[str, RollingSeriesReport]:
-        """
-        Analyze all DataFrame columns using a single rolling window.
-
-        Parameters
-        ----------
-        data : pd.DataFrame
-            Input DataFrame.
-
-        window : int
-            Rolling window size.
-
-        Returns
-        -------
-        Mapping[str, RollingSeriesReport]
-            Mapping between column names and rolling analysis reports.
-        """
-        ...
+    ) -> Mapping[str, RollingSeriesReport]: ...
 
     @overload
     def analyze(
         self,
         data: pd.DataFrame,
         window: List[int]
-    ) -> Mapping[str, Mapping[int, RollingSeriesReport]]:
-        """
-        Analyze all DataFrame columns using multiple rolling windows.
-
-        Parameters
-        ----------
-        data : pd.DataFrame
-            Input DataFrame.
-
-        window : list[int]
-            Collection of rolling window sizes.
-
-        Returns
-        -------
-        Mapping[str, Mapping[int, RollingSeriesReport]]
-            Nested mapping in format:
-            ``column -> window -> report``.
-        """
-        ...
+    ) -> Mapping[str, Mapping[int, RollingSeriesReport]]: ...
 
     def analyze(
         self,
@@ -217,7 +92,8 @@ class RollingAnalysis:
         Returns
         -------
         RollingSeriesReport
-            Returned when input is ``pd.Series`` and ``window`` is int.
+            Returned when input is ``pd.Series`` and ``window`` is
+            int.
 
         Mapping[int, RollingSeriesReport]
             Returned when input is ``pd.Series`` and ``window`` is a
@@ -247,7 +123,9 @@ class RollingAnalysis:
                 return result
             else:
                 result = cast(
-                    typ=Mapping[str, Mapping[int, RollingSeriesReport]],
+                    typ=Mapping[
+                        str, Mapping[int, RollingSeriesReport]
+                    ],
                     val=result
                 )
                 return result
@@ -311,10 +189,10 @@ class RollingAnalysis:
 
         Returns
         -------
-        Mapping[
-            str,
-            Union[RollingSeriesReport, Mapping[int, RollingSeriesReport]]
-        ]
+        Mapping[str, Union[
+            RollingSeriesReport,
+            Mapping[int, RollingSeriesReport]
+        ]]
             Mapping between column names and rolling analysis results.
         """
 
@@ -357,18 +235,24 @@ class RollingAnalysis:
             rolling_min=rolling_min(series=series, window=window),
             rolling_max=rolling_max(series=series, window=window),
 
-            rolling_zscore=rolling_zscore(series=series, window=window),
+            rolling_zscore=rolling_zscore(
+                series=series, window=window
+            ),
 
             rolling_volatility=rolling_volatility(
                 series=series,
                 window=window
             ),
-            rolling_momentum=rolling_momentum(series=series, window=window),
+            rolling_momentum=rolling_momentum(
+                series=series, window=window
+            ),
             rolling_rate_of_change=rolling_rate_of_change(
                 series=series,
                 window=window
             ),
 
-            rolling_variance=rolling_variance(series=series, window=window),
+            rolling_variance=rolling_variance(
+                series=series, window=window
+            ),
             rolling_cv=rolling_cv(series=series, window=window),
         )
