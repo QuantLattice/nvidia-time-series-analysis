@@ -16,12 +16,12 @@ echo ======================================
 echo.
 
 echo %LOG_STEP% Upgrading database to HEAD...
-
-alembic upgrade head
+conda run -n nvidia-tsa alembic upgrade head
 
 if errorlevel 1 (
     echo %LOG_ERROR% Upgrade failed
     popd
+    endlocal
     exit /b 1
 )
 

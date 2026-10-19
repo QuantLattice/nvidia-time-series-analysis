@@ -25,6 +25,15 @@ Pipeline Stages
 """
 
 
+from dataclasses import dataclass
+from pandas import Series
+import pandas as pd
+from typing import (
+    Any,
+    Optional
+)
+from pathlib import Path
+
 from work.library.io.csv_loader import CSVLoader
 from work.scripts.contracts.validation import (
     StockQuoteNormalizer,
@@ -36,7 +45,22 @@ from work.scripts.services import StockQuoteService
 from work.scripts.dto import StockQuoteCreateDTO
 
 
-class CSVImportService:
+@dataclass(frozen=True, slots=True)
+class CSVImportResult:
+    source_file: str
+    rows_total: int
+    rows_imported: int
+    first_trade_date: Optional[str] = None
+    last_trade_date: Optional[str] = None
+
+
+@dataclass(frozen=True, slots=True)
+class CSVExportResult:
+    output_file: str
+    rows_exported: int
+
+
+class CSVService:
     """Import stock quote data from CSV files.
 
     This service orchestrates a complete ETL workflow that converts
@@ -61,7 +85,10 @@ class CSVImportService:
     Validation or normalization failures interrupt the import process.
     """
 
-    def __init__(self, stock_service: StockQuoteService) -> None:
+    def __init__(
+        self,
+        stock_service: StockQuoteService
+    ) -> None:
         """Initialize CSV import service.
 
         Parameters
@@ -72,7 +99,10 @@ class CSVImportService:
 
         self.stock_service = stock_service
 
-    def import_csv(self, path: str) -> None:
+    def import_csv(
+        self,
+        path: str
+    ) -> CSVImportResult:
         """Import stock quotes from a CSV file.
 
         This method executes the complete ETL pipeline:
@@ -93,6 +123,8 @@ class CSVImportService:
             If mapping, normalization, or validation fails.
         """
 
+        filename = Path(path).name
+
         # ---------------------------
         # EXTRACT
         # ---------------------------
@@ -101,7 +133,10 @@ class CSVImportService:
         # ---------------------------
         # MAP EXTERNAL SCHEMA
         # ---------------------------
-        df = StockQuoteMapper.map(df=df)
+        df = StockQuoteMapper.map(
+            df=df,
+            source=filename
+        )
 
         # ---------------------------
         # NORMALIZE DATA
@@ -116,17 +151,9 @@ class CSVImportService:
         # ---------------------------
         # MAP DATAFRAME TO DTO
         # ---------------------------
+
         quotes = [
-            StockQuoteCreateDTO(
-                trade_date=row[S.TRADE_DATE],
-                source=row[S.SOURCE],
-                open_price=row[S.OPEN_PRICE],
-                high_price=row[S.HIGH_PRICE],
-                low_price=row[S.LOW_PRICE],
-                close_price=row[S.CLOSE_PRICE],
-                adj_close_price=row.get(S.ADJ_CLOSE_PRICE),
-                volume=row[S.VOLUME]
-            )
+            self._to_dto(row)
             for _, row in df.iterrows()
         ]
 
@@ -134,3 +161,64 @@ class CSVImportService:
         # LOAD INTO DATABASE
         # ---------------------------
         self.stock_service.create_quote_bulk(quotes)
+
+        rows_total = len(df)
+        first_trade_date = None
+        last_trade_date = None
+        if not df.empty and S.TRADE_DATE in df.columns:
+            first_trade_date = self._to_iso_date(df[S.TRADE_DATE].min())
+            last_trade_date = self._to_iso_date(df[S.TRADE_DATE].max())
+
+        return CSVImportResult(
+            source_file=filename,
+            rows_total=rows_total,
+            rows_imported=len(quotes),
+            first_trade_date=first_trade_date,
+            last_trade_date=last_trade_date,
+        )
+
+    def export_csv(
+        self,
+        path: str
+    ) -> CSVExportResult:
+        df = self.stock_service.get_all_quotes_df()
+        df.loc
+        df.to_csv(path_or_buf=path, index=False)
+
+        return CSVExportResult(
+            output_file=Path(path).name,
+            rows_exported=len(df),
+        )
+
+    def _to_dto(
+        self,
+        row: Series
+    ) -> StockQuoteCreateDTO:
+        return StockQuoteCreateDTO(
+            trade_date=row[S.TRADE_DATE],
+            source=row[S.SOURCE],
+            open_price=row[S.OPEN_PRICE],
+            high_price=row[S.HIGH_PRICE],
+            low_price=row[S.LOW_PRICE],
+            close_price=row[S.CLOSE_PRICE],
+            adj_close_price=self._nullable(
+                row.get(S.ADJ_CLOSE_PRICE)
+            ),
+            volume=row[S.VOLUME],
+        )
+
+    def _nullable(
+        self,
+        value: Optional[Any]
+    ) -> Optional[Any]:
+        return None if pd.isna(value) else value
+
+    def _to_iso_date(
+        self,
+        value: Any
+    ) -> Optional[str]:
+        if value is None or pd.isna(value):
+            return None
+        if hasattr(value, "isoformat"):
+            return value.isoformat()
+        return str(value)

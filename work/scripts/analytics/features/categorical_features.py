@@ -14,120 +14,36 @@ The generated categories can be used for:
 """
 
 
-from dataclasses import dataclass
 from typing import Optional
-from enum import StrEnum
 import numpy as np
 import pandas as pd
 
-from work.scripts.analytics.constants import (
-    CATEGORY_HIGH_QUANTILE,
-    CATEGORY_LOW_QUANTILE,
-    PRICE_TREND_EPSILON,
-    RETURN_STRONG_THRESHOLD,
-)
 from work.scripts.contracts import AnalyticsFeatureNames as FN
-
-
-class CategoricalLabels(StrEnum):
-    """
-    Standard categorical labels used in analytics pipelines.
-
-    Categories are grouped by analytical domain:
-    - price trend direction;
-    - return strength/sign;
-    - volatility and volume regimes.
-    """
-
-    # =========================
-    # PRICE TREND
-    # =========================
-
-    TREND_UP = "up"
-    TREND_DOWN = "down"
-    TREND_FLAT = "flat"
-
-    # =========================
-    # RETURN SIGN
-    # =========================
-
-    STRONG_UP = "strong_up"
-    UP = "up"
-    FLAT = "flat"
-    DOWN = "down"
-    STRONG_DOWN = "strong_down"
-    UNKNOWN = "unknown"
-
-    # =========================
-    # VOLATILITY / VOLUME
-    # =========================
-
-    LOW = "low"
-    MEDIUM = "medium"
-    HIGH = "high"
-
-
-@dataclass(frozen=True)
-class CategoricalFeatureConfig:
-    """
-    Configuration for categorical feature generation.
-
-    Parameters
-    ----------
-    price_trend_epsilon : float, default=PRICE_TREND_EPSILON
-        Threshold used to classify price trend direction.
-
-    strong_return_threshold : float, default=RETURN_STRONG_THRESHOLD
-        Absolute return threshold used to classify strong returns.
-
-    low_quantile : float, default=CATEGORY_LOW_QUANTILE
-        Lower quantile boundary for regime classification.
-
-    high_quantile : float, default=CATEGORY_HIGH_QUANTILE
-        Upper quantile boundary for regime classification.
-    """
-
-    price_trend_epsilon: float = PRICE_TREND_EPSILON
-    strong_return_threshold: float = RETURN_STRONG_THRESHOLD
-    low_quantile: float = CATEGORY_LOW_QUANTILE
-    high_quantile: float = CATEGORY_HIGH_QUANTILE
+from work.scripts.analytics.features.categorical_contracts import (
+    CategoricalFeatureConfig,
+    CategoricalLabels,
+)
 
 
 class CategoricalFeatureGenerator:
     """
     Generate categorical analytical features from continuous data.
 
-    The generator converts numerical analytical metrics into discrete
-    categorical labels suitable for downstream analysis, dashboards,
-    and machine learning workflows.
+    Converts numerical analytical metrics into discrete categorical
+    labels suitable for downstream analysis, dashboards, and
+    machine learning workflows.
 
     Generated features include:
     - price trend direction;
     - return sign and strength;
     - volatility regimes;
     - volume regimes.
-
-    Parameters
-    ----------
-    config : Optional[CategoricalFeatureConfig], optional
-        Configuration object controlling classification thresholds
-        and quantile boundaries.
     """
 
     def __init__(
         self,
         config: Optional[CategoricalFeatureConfig] = None
     ) -> None:
-        """
-        Initialize categorical feature generator.
-
-        Parameters
-        ----------
-        config : Optional[CategoricalFeatureConfig], optional
-            Configuration object for categorical thresholds
-            and quantile boundaries.
-        """
-
         self.config = config or CategoricalFeatureConfig()
 
     def apply(
@@ -162,23 +78,18 @@ class CategoricalFeatureGenerator:
         """
 
         result = df.copy()
-
         result[FN.PRICE_TREND] = self.price_trend(
             series=result[daily_return_column]
         )
-
         result[FN.RETURN_SIGN] = self.return_sign(
             series=result[daily_return_column]
         )
-
         result[FN.VOLATILITY_REGIME] = self.volatility_regime(
             series=result[volatility_column]
         )
-
         result[FN.VOLUME_REGIME] = self.volume_regime(
             series=result[volume_column]
         )
-
         return result
 
     def price_trend(
@@ -196,12 +107,8 @@ class CategoricalFeatureGenerator:
         Returns
         -------
         pd.Series
-            Series containing:
-            - ``up``
-            - ``down``
-            - ``flat``
+            Series with labels ``up``, ``down``, or ``flat``.
         """
-
         trend = np.select(
             condlist=[
                 series > self.config.price_trend_epsilon,
@@ -235,15 +142,9 @@ class CategoricalFeatureGenerator:
         Returns
         -------
         pd.Series
-            Series containing:
-            - ``strong_up``
-            - ``up``
-            - ``flat``
-            - ``down``
-            - ``strong_down``
-            - ``unknown``
+            Series with labels ``strong_up``, ``up``, ``flat``,
+            ``down``, ``strong_down``, or ``unknown``.
         """
-
         strong = self.config.strong_return_threshold
 
         sign = np.select(
@@ -285,19 +186,14 @@ class CategoricalFeatureGenerator:
         Returns
         -------
         pd.Series
-            Volatility regime labels:
-            - ``low``
-            - ``medium``
-            - ``high``
+            Series with labels ``low``, ``medium``, or ``high``.
         """
-
         regime = self._bucket_by_quantiles(
             series=series,
             low_label=CategoricalLabels.LOW,
             mid_label=CategoricalLabels.MEDIUM,
             high_label=CategoricalLabels.HIGH
         )
-
         return pd.Series(
             data=regime,
             index=series.index,
@@ -319,19 +215,14 @@ class CategoricalFeatureGenerator:
         Returns
         -------
         pd.Series
-            Volume regime labels:
-            - ``low``
-            - ``medium``
-            - ``high``
+            Series with labels ``low``, ``medium``, or ``high``.
         """
-
         regime = self._bucket_by_quantiles(
             series=series,
             low_label=CategoricalLabels.LOW,
             mid_label=CategoricalLabels.MEDIUM,
             high_label=CategoricalLabels.HIGH
         )
-
         return pd.Series(
             data=regime,
             index=series.index,
@@ -354,13 +245,13 @@ class CategoricalFeatureGenerator:
             Numerical series to classify.
 
         low_label : str
-            Label assigned to values below or equal to the lower quantile.
+            Label for values at or below the lower quantile.
 
         mid_label : str
-            Label assigned to middle-range values.
+            Label for middle-range values.
 
         high_label : str
-            Label assigned to values above the upper quantile.
+            Label for values above the upper quantile.
 
         Returns
         -------
@@ -370,13 +261,17 @@ class CategoricalFeatureGenerator:
         Notes
         -----
         If quantile computation is invalid (NaN or overlapping
-        boundaries), the entire series is assigned the middle label.
+        boundaries), the entire series is assigned mid_label.
         """
 
         low_q = series.quantile(q=self.config.low_quantile)
         high_q = series.quantile(q=self.config.high_quantile)
 
-        if pd.isna(obj=low_q) or pd.isna(obj=high_q) or low_q >= high_q:
+        if (
+            pd.isna(obj=low_q)
+            or pd.isna(obj=high_q)
+            or low_q >= high_q
+        ):
             return pd.Series(
                 data=mid_label,
                 index=series.index,

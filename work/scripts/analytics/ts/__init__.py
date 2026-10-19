@@ -27,16 +27,20 @@ from .stationarity import (
     ADFTestResult,
     adf_test
 )
-from .autocorrelation import (
+from .autocorrelation_contracts import (
     AutocorrelationConfig,
     AutocorrelationResult,
     PartialAutocorrelationResult,
-    autocorrelation_series,
-    partial_autocorrelation_series,
+)
+from .autocorrelation_utils import (
     strongest_autocorrelation_lag,
     strongest_partial_autocorrelation_lag,
     significant_autocorrelation_lags,
-    significant_partial_autocorrelation_lags
+    significant_partial_autocorrelation_lags,
+)
+from .autocorrelation import (
+    autocorrelation_series,
+    partial_autocorrelation_series,
 )
 
 

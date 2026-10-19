@@ -17,15 +17,16 @@ echo.
 
 if "%~1"=="" (
     echo %LOG_STEP% No revision specified, defaulting to -1
-    alembic downgrade -1
+    conda run -n nvidia-tsa alembic downgrade -1
 ) else (
     echo %LOG_STEP% Downgrading to revision: %1
-    alembic downgrade %1
+    conda run -n nvidia-tsa alembic downgrade %1
 )
 
 if errorlevel 1 (
     echo %LOG_ERROR% Downgrade failed
     popd
+    endlocal
     exit /b 1
 )
 

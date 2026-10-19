@@ -10,7 +10,6 @@ The analysis includes:
 """
 
 
-from dataclasses import dataclass
 from typing import Mapping, List, Union, overload
 import pandas as pd
 
@@ -23,62 +22,14 @@ from work.scripts.analytics.utils import resolve_series_name
 from work.scripts.analytics.statistics import (
     quantiles,
     iqr,
-    OutlierBounds,
     outlier_bounds,
     outlier_mask,
     histogram_bins,
-    HistogramResult,
-    empirical_cdf,
-    EmpiricalCDFResult
+    empirical_cdf
 )
-
-
-@dataclass(frozen=True)
-class DistributionAnalysisReport:
-    """
-    Distribution summary report for a single Series.
-
-    Attributes
-    ----------
-    name : str
-        Resolved series name.
-
-    quantiles : Mapping[float, float]
-        Mapping between quantile probabilities and corresponding
-        estimated values.
-
-    iqr : float
-        Interquartile range.
-
-    outlier_bounds : OutlierBounds
-        Lower and upper Tukey outlier boundaries.
-
-    outlier_count : int
-        Number of detected outliers.
-
-    outlier_ratio : float
-        Share of observations classified as outliers.
-
-    histogram : HistogramResult
-        Histogram bin counts and edges.
-
-    empirical_cdf : EmpiricalCDFResult
-        Empirical cumulative distribution function values.
-    """
-
-    name: str
-
-    quantiles: Mapping[float, float]
-
-    iqr: float
-
-    outlier_bounds: OutlierBounds
-    outlier_count: int
-    outlier_ratio: float
-
-    histogram: HistogramResult
-
-    empirical_cdf: EmpiricalCDFResult
+from work.scripts.analytics.analysis.distribution_contracts import (
+    DistributionAnalysisReport
+)
 
 
 class DistributionAnalysis:

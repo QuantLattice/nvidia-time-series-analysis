@@ -13,7 +13,7 @@ echo ======================================
 echo.
 
 echo %LOG_STEP% Checking current DB revision...
-alembic current
+conda run -n nvidia-tsa alembic current
 
 popd
 endlocal
